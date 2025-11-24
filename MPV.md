@@ -59,7 +59,7 @@
 - [x] **Ajuste de Pesos**: Definir variables para los pesos ($w_1$ a $w_7$) para calibración.
 
 ## 6. Condiciones de Finalización
-- [ ] **Victoria**: La abeja acumula la cantidad objetivo de néctar.
-- [ ] **Derrota**:
-    - [ ] Vida de la abeja llega a 0.
-    - [ ] No quedan flores disponibles en el tablero.
+- [x] **Victoria**: La abeja acumula la cantidad objetivo de néctar.
+- [x] **Derrota**:
+    - [x] Vida de la abeja llega a 0.
+    - [x] No quedan flores disponibles en el tablero.

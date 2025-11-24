@@ -4,13 +4,14 @@ import humanidad
 import chance_events
 import expectimax
 from heuristica import Heuristica
+from game_manager import GameManager
 
 if __name__ == "__main__":
-    # Crear tablero 8x8 (más pequeño para demo)
+    # Crear tablero 8x8
     tablero = board.Board(8, 8)
     
     # Inicializar tablero con rusc, flores y obstáculos
-    tablero.inicializar_tablero(num_flores=10, num_obstaculos=2)
+    tablero.inicializar_tablero(num_flores=12, num_obstaculos=2)
     
     # Crear agentes y sistema de eventos
     abeja = bee.Bee(100)
@@ -31,25 +32,33 @@ if __name__ == "__main__":
     # Crear IA Expectimax con heurística
     ai = expectimax.ExpectimaxAI(max_depth=2, heuristica=heuristica)
     
+    # Crear gestor del juego con objetivo de néctar
+    game_manager = GameManager(nectar_objetivo=50)  # Objetivo reducido para demo
+    
     # Mostrar tablero inicial
     print("="*60)
-    print("DEMO MVP5 - HEURÍSTICA COMPLETA")
+    print("DEMO MVP6 - CONDICIONES DE FINALIZACIÓN")
     print("="*60)
     tablero.mostrar_tablero()
     
     print("\n--- CONFIGURACIÓN ---")
     print(f"🐝 Abeja: {abeja.to_string()}")
-    print(f"👨 Humanidad: {humanidad_agente.to_string()}")
-    print(f"🤖 IA Expectimax: Profundidad máxima = {ai.max_depth}")
-    print(f"\n📊 Heurística:")
-    print(heuristica.to_string())
+    print(f"🎯 Objetivo: {game_manager.nectar_objetivo} unidades de néctar")
+    print(f"🤖 IA Expectimax: Profundidad = {ai.max_depth}")
     
     # Posición inicial de la abeja
     pos_abeja = (tablero.rusc_pos[0] - 1, tablero.rusc_pos[1])
     print(f"\nPosición inicial de la abeja: {pos_abeja}")
     
-    # ===== SIMULACIÓN CON EXPECTIMAX =====
-    for turno in range(1, 6):
+    # Mostrar estado inicial
+    game_manager.mostrar_estado(tablero, abeja)
+    
+    # ===== SIMULACIÓN CON EXPECTIMAX Y CONDICIONES DE FINALIZACIÓN =====
+    turno = 0
+    max_turnos = 30  # Límite de seguridad
+    
+    while not game_manager.juego_terminado and turno < max_turnos:
+        turno += 1
         print("\n" + "="*60)
         print(f"TURNO {turno}")
         print("="*60)
@@ -58,7 +67,7 @@ if __name__ == "__main__":
         
         # Turno de la abeja usando Expectimax
         if turno % 2 == 1:
-            print("\n--- ABEJA (USANDO EXPECTIMAX) ---")
+            print("\n--- ABEJA (IA EXPECTIMAX) ---")
             
             # Crear estado actual
             estado_actual = expectimax.GameState(
@@ -67,69 +76,68 @@ if __name__ == "__main__":
                 tablero.get_turno()
             )
             
-            # Obtener mejor acción usando Expectimax
-            print("🤖 Calculando mejor acción con Expectimax...")
+            # Obtener mejor acción
             mejor_accion = ai.get_best_action(estado_actual)
-            print(f"   Nodos explorados: {ai.nodes_explored}")
-            
-            # Evaluar estado actual
-            valor_actual = ai.heuristica.evaluar(estado_actual)
-            print(f"   Valor heurístico del estado: {valor_actual:.2f}")
             
             if mejor_accion:
                 tipo_accion, objetivo = mejor_accion
-                print(f"   Mejor acción: {tipo_accion}")
+                print(f"Acción: {tipo_accion}", end="")
                 
                 if tipo_accion == 'recoger':
-                    print(f"   Objetivo: Recoger néctar en {objetivo}")
+                    print(f" en {objetivo}")
                     abeja.recoger_nectar_y_polinizar(tablero, objetivo)
                     pos_abeja = objetivo
                 
                 elif tipo_accion == 'mover':
-                    print(f"   Objetivo: Moverse a {objetivo}")
+                    print(f" a {objetivo}")
                     if abeja.mover(tablero, pos_abeja, objetivo):
                         pos_abeja = objetivo
                 
                 elif tipo_accion == 'descansar':
-                    print(f"   Objetivo: Descansar")
+                    print()
                     abeja.descansar()
                 
                 elif tipo_accion == 'descargar':
-                    print(f"   Objetivo: Descargar néctar en rusc")
+                    print(f" en rusc")
                     abeja.descargar_nectar_en_rusc(tablero, pos_abeja)
                     abeja.recuperar_energia_en_rusc(tablero, pos_abeja)
                 
-                print(f"   Estado: {abeja.to_string()}")
-            else:
-                print("   No hay acciones disponibles")
+                # Si está en el rusc y tiene néctar, descargar
+                if tablero.es_rusc(pos_abeja[0], pos_abeja[1]) and abeja.nectar_cargado > 0:
+                    abeja.descargar_nectar_en_rusc(tablero, pos_abeja)
+                    abeja.recuperar_energia_en_rusc(tablero, pos_abeja)
+            
+            print(f"Estado: Vida={abeja.life}, Energía={abeja.energia}, Néctar={abeja.nectar_cargado}")
         
-        # Turno de la humanidad (sin IA, acción aleatoria)
+        # Turno de la humanidad
         else:
             print("\n--- HUMANIDAD ---")
             acciones = humanidad_agente.obtener_acciones_validas(tablero, pos_abeja)
             
             if acciones:
-                # Elegir acción aleatoria
                 import random
                 accion = random.choice(acciones)
                 tipo_accion, pos = accion
                 print(f"Acción: {tipo_accion} en {pos}")
                 humanidad_agente.ejecutar_accion(tablero, accion, pos_abeja)
-            else:
-                print("Sin acciones válidas")
         
         # Eventos de azar
-        print("\n--- EVENTOS DE AZAR ---")
-        eventos = eventos_azar.ejecutar_eventos_turno(tablero, tablero.get_turno())
+        if turno % 4 == 0:
+            eventos = eventos_azar.ejecutar_eventos_turno(tablero, tablero.get_turno())
+            if eventos["evento_clima"]:
+                print(f"\n🌦️  Evento climático: {eventos['clima']}")
+                if eventos['stats_reproduccion']['flores_nuevas'] > 0:
+                    print(f"   🌸 {eventos['stats_reproduccion']['flores_nuevas']} nuevas flores!")
         
-        if eventos["evento_clima"]:
-            print(f"🌦️  Clima: {eventos['clima']}")
-            if eventos['stats_reproduccion']['flores_nuevas'] > 0:
-                print(f"   🌸 {eventos['stats_reproduccion']['flores_nuevas']} nuevas flores!")
-        else:
-            print(f"Clima: {eventos_azar.get_clima_actual()}")
+        # Verificar condiciones de finalización
+        terminado, resultado, mensaje = game_manager.verificar_condiciones_finalizacion(tablero, abeja)
         
-        print(f"\n📊 Flores: {tablero.contar_flores_vivas()} | Néctar rusc: {tablero.nectar_en_rusc}")
+        # Mostrar progreso cada 3 turnos
+        if turno % 3 == 0 or terminado:
+            game_manager.mostrar_estado(tablero, abeja)
+        
+        if terminado:
+            break
     
     # ===== RESUMEN FINAL =====
     print("\n" + "="*60)
@@ -138,10 +146,16 @@ if __name__ == "__main__":
     tablero.mostrar_tablero()
     
     print("\n" + "="*60)
-    print("RESUMEN FINAL")
+    print("RESUMEN FINAL DEL JUEGO")
     print("="*60)
-    print(f"Turnos simulados: {tablero.get_turno()}")
-    print(f"Estado abeja: {abeja.to_string()}")
-    print(f"Flores vivas: {tablero.contar_flores_vivas()}")
-    print(f"Néctar en rusc: {tablero.nectar_en_rusc}")
-    print(f"Total nodos explorados por Expectimax: {ai.nodes_explored}")
+    
+    estado_final = game_manager.get_estado_juego(tablero, abeja)
+    print(f"Resultado: {estado_final['resultado'] if estado_final['terminado'] else 'JUEGO INTERRUMPIDO'}")
+    print(f"Turnos jugados: {estado_final['turnos']}")
+    print(f"Néctar recolectado: {estado_final['nectar_actual']}/{estado_final['nectar_objetivo']}")
+    print(f"Progreso: {estado_final['progreso_victoria']:.1f}%")
+    print(f"Estado abeja: Vida={estado_final['vida_abeja']}, Energía={estado_final['energia_abeja']}")
+    print(f"Flores: {estado_final['flores_vivas']} vivas de {estado_final['flores_totales']} totales")
+    
+    if estado_final['terminado']:
+        print(f"\n{estado_final['mensaje']}")
