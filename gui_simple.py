@@ -71,6 +71,19 @@ class BeeGameGUI:
         self.turno_jugador = True  # True = turno del jugador, False = turno humanidad
         self.ultimo_turno_obstaculo = -3  # Para controlar obstáculos cada 3 turnos
         
+        # Variables para A* animado
+        self.moviendo_a_star = False
+        self.ruta_a_star = []
+        self.paso_a_star = 0
+        self.timer_a_star = 0
+        self.velocidad_a_star = 15  # frames entre pasos
+        
+        # Variables para eventos climáticos
+        self.mostrar_evento_clima = False
+        self.mensaje_evento_clima = ""
+        self.timer_evento_clima = 0
+        self.duracion_evento_clima = 120  # frames (2 segundos a 60fps)
+        
         # Botones
         self.botones = self.crear_botones()
         
@@ -149,6 +162,11 @@ class BeeGameGUI:
             pygame.draw.circle(self.screen, AMARILLO,
                              (x + self.CELL_SIZE//2, y + self.CELL_SIZE//2),
                              self.CELL_SIZE//6)
+            
+            # Mostrar cantidad de néctar si tiene
+            if self.abeja.nectar_cargado > 0:
+                texto_nectar = self.font_small.render(str(self.abeja.nectar_cargado), True, NARANJA)
+                self.screen.blit(texto_nectar, (x + self.CELL_SIZE - 20, y + self.CELL_SIZE - 20))
         
         # Resaltar celda seleccionada
         if self.celda_seleccionada == (fila, col):
@@ -216,8 +234,10 @@ class BeeGameGUI:
         
         objetivo = self.game_manager.nectar_objetivo
         actual = self.board.nectar_en_rusc
-        self.dibujar_barra(x_panel, y_offset, 250, 25, actual, objetivo, NARANJA, 
-                          f"Rusc: {actual}/{objetivo}")
+        
+        # Mostrar barra solo hasta el objetivo, pero mostrar número total almacenado
+        self.dibujar_barra(x_panel, y_offset, 250, 25, min(actual, objetivo), objetivo, NARANJA, 
+                          f"Objetivo: {actual}/{objetivo}")
         y_offset += 40
         
         # --- Flores ---
@@ -344,6 +364,54 @@ class BeeGameGUI:
         rect_texto = texto.get_rect(center=(self.WINDOW_WIDTH // 2, self.WINDOW_HEIGHT - 30))
         self.screen.blit(texto, rect_texto)
     
+    def dibujar_evento_climatico(self):
+        """Dibuja notificación de evento climático"""
+        if not self.mostrar_evento_clima:
+            return
+        
+        # Calcular alpha (transparencia) basado en el timer
+        progreso = self.timer_evento_clima / self.duracion_evento_clima
+        if progreso > 0.8:
+            alpha = int(255 * (1 - (progreso - 0.8) / 0.2))
+        else:
+            alpha = 255
+        
+        # Fondo semi-transparente
+        ancho_notif = 600
+        alto_notif = 80
+        x_notif = (self.WINDOW_WIDTH - ancho_notif) // 2
+        y_notif = 50
+        
+        overlay = pygame.Surface((ancho_notif, alto_notif))
+        overlay.set_alpha(min(alpha, 230))
+        
+        # Color según clima
+        if self.clima_actual == "Lluvia":
+            overlay.fill(AZUL)
+        elif self.clima_actual == "Sol":
+            overlay.fill(AMARILLO)
+        else:
+            overlay.fill(GRIS)
+        
+        self.screen.blit(overlay, (x_notif, y_notif))
+        
+        # Borde
+        pygame.draw.rect(self.screen, NEGRO, (x_notif, y_notif, ancho_notif, alto_notif), 3)
+        
+        # Texto
+        color_texto = BLANCO if self.clima_actual == "Lluvia" else NEGRO
+        texto = self.font_normal.render(self.mensaje_evento_clima, True, color_texto)
+        rect_texto = texto.get_rect(center=(self.WINDOW_WIDTH // 2, y_notif + alto_notif // 2))
+        self.screen.blit(texto, rect_texto)
+    
+    def actualizar_evento_climatico(self):
+        """Actualiza el timer del evento climático"""
+        if self.mostrar_evento_clima:
+            self.timer_evento_clima += 1
+            if self.timer_evento_clima >= self.duracion_evento_clima:
+                self.mostrar_evento_clima = False
+                self.timer_evento_clima = 0
+    
     def obtener_celda_click(self, pos):
         """Convierte posición de click a coordenadas de celda"""
         x, y = pos
@@ -360,17 +428,31 @@ class BeeGameGUI:
         
         fila, col = destino
         
-        # Verificar si es el rusc o celda vacía
-        celda = self.board.grid[fila][col]
-        if celda in [None, 'RUSC']:
+        # Verificar si es transitable (ahora incluye flores)
+        if self.board.es_transitable(fila, col):
             if self.abeja.mover(self.board, self.pos_abeja, destino):
+                # Verificar si hubo daño por pesticida
+                from flower import Flower
+                celda = self.board.grid[fila][col]
+                daño = 0
+                if isinstance(celda, Flower) and celda.esta_viva():
+                    daño = celda.get_daño_pesticida()
+                
                 self.pos_abeja = destino
                 self.mensaje = f"Movida a ({fila}, {col})"
                 
-                # Si llega al rusc, recuperar energía
+                if daño > 0:
+                    self.mensaje += f" | ¡Daño por pesticida! -{daño} vida"
+                
+                # Si llega al rusc, recuperar energía y vida, y descargar néctar
                 if self.board.es_rusc(fila, col):
+                    nectar_descargado = self.abeja.nectar_cargado
+                    if nectar_descargado > 0:
+                        self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
                     self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
-                    self.mensaje += " | Energia recuperada"
+                    self.mensaje = f"EN EL RUSC: Energia y Vida al máximo!"
+                    if nectar_descargado > 0:
+                        self.mensaje += f" | {nectar_descargado} néctar descargado!"
                 
                 # FINALIZAR TURNO DEL JUGADOR
                 self.finalizar_turno_jugador()
@@ -422,36 +504,69 @@ class BeeGameGUI:
         return True
     
     def accion_a_star(self):
-        """Mueve la abeja automáticamente hacia el rusc usando A*"""
-        if self.game_over or not self.turno_jugador:
+        """Inicia el movimiento automático hacia el rusc usando A*"""
+        if self.game_over or not self.turno_jugador or self.moviendo_a_star:
             return False
         
         ruta = self.abeja.calcular_ruta_a_rusc(self.board, self.pos_abeja)
         
         if ruta and len(ruta) > 1:
-            # Mover automáticamente por toda la ruta
-            for i in range(1, len(ruta)):
-                siguiente = ruta[i]
-                if self.abeja.mover(self.board, self.pos_abeja, siguiente):
-                    self.pos_abeja = siguiente
-                else:
-                    self.mensaje = "Se quedo sin energia en el camino"
-                    self.finalizar_turno_jugador()
-                    return False
-            
-            # Si llegó al rusc, recuperar energía
-            if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
-                self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
-                self.mensaje = f"A*: Llegada al rusc (recorridos {len(ruta)-1} pasos) | Energia recuperada"
-            else:
-                self.mensaje = f"A*: Movimiento completado ({len(ruta)-1} pasos)"
-            
-            # FINALIZAR TURNO DEL JUGADOR
-            self.finalizar_turno_jugador()
+            # Iniciar animación de movimiento A*
+            self.moviendo_a_star = True
+            self.ruta_a_star = ruta
+            self.paso_a_star = 1  # Empezar desde el paso 1 (0 es la posición actual)
+            self.timer_a_star = 0
+            self.mensaje = f"A*: Calculando ruta al rusc ({len(ruta)-1} pasos)..."
             return True
         else:
             self.mensaje = "Ya estas en el rusc"
         return False
+    
+    def actualizar_a_star(self):
+        """Actualiza la animación del movimiento A*"""
+        if not self.moviendo_a_star:
+            return
+        
+        self.timer_a_star += 1
+        
+        # Mover cada cierto número de frames
+        if self.timer_a_star >= self.velocidad_a_star:
+            self.timer_a_star = 0
+            
+            if self.paso_a_star < len(self.ruta_a_star):
+                siguiente = self.ruta_a_star[self.paso_a_star]
+                
+                # Intentar mover
+                if self.abeja.mover(self.board, self.pos_abeja, siguiente):
+                    self.pos_abeja = siguiente
+                    self.paso_a_star += 1
+                    pasos_restantes = len(self.ruta_a_star) - self.paso_a_star
+                    self.mensaje = f"A*: Moviendo... ({pasos_restantes} pasos restantes)"
+                else:
+                    # Sin energía
+                    self.mensaje = "A*: Sin energia!"
+                    self.moviendo_a_star = False
+                    self.finalizar_turno_jugador()
+                    return
+            
+            # Si llegó al final de la ruta
+            if self.paso_a_star >= len(self.ruta_a_star):
+                self.moviendo_a_star = False
+                
+                # Si llegó al rusc, descargar néctar y recuperar energía y vida
+                if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
+                    nectar_descargado = self.abeja.nectar_cargado
+                    if nectar_descargado > 0:
+                        self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
+                    self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
+                    self.mensaje = f"A*: Llegada al rusc! Energia y Vida al máximo!"
+                    if nectar_descargado > 0:
+                        self.mensaje += f" | {nectar_descargado} néctar descargado!"
+                else:
+                    self.mensaje = f"A*: Movimiento completado"
+                
+                # Finalizar turno
+                self.finalizar_turno_jugador()
     
     def accion_descargar(self):
         """Descarga néctar en el rusc"""
@@ -482,6 +597,7 @@ class BeeGameGUI:
             return
         
         self.turno += 1
+        self.board.incrementar_turno()  # Incrementar turno del board (limpia flores muertas)
         
         # Contar obstáculos actuales
         obstaculos_actuales = sum(1 for fila in self.board.grid for celda in fila if celda == 'OBSTACULO')
@@ -524,6 +640,17 @@ class BeeGameGUI:
             self.clima_actual = self.eventos_azar.clima_actual
             self.eventos_azar.aplicar_efecto_clima(self.board)
             
+            # Mostrar evento climático
+            if self.clima_actual == "Lluvia":
+                self.mensaje_evento_clima = "☔ LLUVIA: Pesticidas reducidos en todas las flores"
+            elif self.clima_actual == "Sol":
+                self.mensaje_evento_clima = "☀️ SOL: +20% probabilidad de reproducción"
+            else:
+                self.mensaje_evento_clima = "🌤️ CLIMA NORMAL"
+            
+            self.mostrar_evento_clima = True
+            self.timer_evento_clima = 0
+            
             # Intentar reproducción
             nuevas = 0
             for pos_flor, flor in self.board.flores[:]:
@@ -533,7 +660,7 @@ class BeeGameGUI:
                         nuevas += 1
             
             if nuevas > 0:
-                self.mensaje += f" | Clima: {self.clima_actual} ({nuevas} nuevas flores)"
+                self.mensaje_evento_clima += f" | {nuevas} flores nuevas nacieron!"
         
         # Verificar condiciones de finalización
         terminado, resultado, mensaje_final = self.game_manager.verificar_condiciones_finalizacion(
@@ -566,34 +693,52 @@ class BeeGameGUI:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     
-                    # Click en tablero (solo si es turno del jugador)
-                    celda = self.obtener_celda_click(pos)
-                    if celda and self.turno_jugador:
-                        self.celda_seleccionada = celda
-                        # Intentar mover a la celda
-                        self.mover_abeja(celda)
+                    # Click izquierdo - mover directamente
+                    if event.button == 1:  # Click izquierdo
+                        celda = self.obtener_celda_click(pos)
+                        if celda and self.turno_jugador:
+                            # Intentar mover a la celda
+                            self.mover_abeja(celda)
+                        
+                        # Click en botón recoger (solo si es turno del jugador)
+                        if self.botones['recoger'].collidepoint(pos) and self.turno_jugador and not self.game_over:
+                            self.recoger_nectar()
+                        
+                        # Click en botón descansar
+                        elif self.botones['descansar'].collidepoint(pos) and self.turno_jugador and not self.game_over:
+                            self.accion_descansar()
+                        
+                        # Click en botón A*
+                        elif self.botones['a_star'].collidepoint(pos) and self.turno_jugador and not self.game_over:
+                            self.accion_a_star()
+                        
+                        # Click en botón descargar
+                        elif self.botones['descargar'].collidepoint(pos) and self.turno_jugador and not self.game_over:
+                            self.accion_descargar()
                     
-                    # Click en botón recoger (solo si es turno del jugador)
-                    if self.botones['recoger'].collidepoint(pos) and self.turno_jugador and not self.game_over:
-                        self.recoger_nectar()
-                    
-                    # Click en botón descansar
-                    elif self.botones['descansar'].collidepoint(pos) and self.turno_jugador and not self.game_over:
-                        self.accion_descansar()
-                    
-                    # Click en botón A*
-                    elif self.botones['a_star'].collidepoint(pos) and self.turno_jugador and not self.game_over:
-                        self.accion_a_star()
-                    
-                    # Click en botón descargar
-                    elif self.botones['descargar'].collidepoint(pos) and self.turno_jugador and not self.game_over:
-                        self.accion_descargar()
+                    # Click derecho - seleccionar casilla
+                    elif event.button == 3:  # Click derecho
+                        celda = self.obtener_celda_click(pos)
+                        if celda and self.turno_jugador:
+                            self.celda_seleccionada = celda
+                            fila, col = celda
+                            self.mensaje = f"Casilla seleccionada: ({fila}, {col})"
+            
+            # Actualizar animaciones
+            if self.moviendo_a_star:
+                self.actualizar_a_star()
+            
+            # Actualizar evento climático
+            self.actualizar_evento_climatico()
             
             # Dibujar
             self.screen.fill(BLANCO)
             self.dibujar_tablero()
             self.dibujar_panel_info()
             self.dibujar_botones()
+            
+            # Dibujar notificación de evento climático
+            self.dibujar_evento_climatico()
             
             if self.game_over:
                 self.dibujar_game_over()

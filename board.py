@@ -88,6 +88,7 @@ class Board():
         if not (0 <= fila < self.filas and 0 <= col < self.columnas):
             return False
         celda = self.get_celda(fila, col)
+        # Las flores siempre son transitables, solo los obstáculos no lo son
         return celda != "OBSTACULO"
     
     def colocar_obstaculo(self, fila, col):
@@ -121,10 +122,28 @@ class Board():
     def incrementar_turno(self):
         """Incrementa el contador de turnos."""
         self.turno += 1
+        # Incrementar contador de flores muertas y eliminarlas si es necesario
+        self.limpiar_flores_muertas()
     
     def get_turno(self):
         """Retorna el turno actual."""
         return self.turno
+    
+    def limpiar_flores_muertas(self):
+        """Elimina flores muertas que llevan 1 turno muertas."""
+        flores_a_eliminar = []
+        for pos, flor in self.flores:
+            if not flor.esta_viva():
+                flor.incrementar_turno_muerta()
+                if flor.debe_eliminarse():
+                    flores_a_eliminar.append((pos, flor))
+                    # Limpiar del grid
+                    self.grid[pos[0]][pos[1]] = None
+        
+        # Eliminar de la lista de flores
+        for item in flores_a_eliminar:
+            if item in self.flores:
+                self.flores.remove(item)
     
     def mostrar_tablero(self):
         """Imprime una representación visual del tablero."""

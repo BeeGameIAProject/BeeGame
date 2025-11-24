@@ -36,6 +36,17 @@ class Bee():
 
         print("Movimiento inválido.")
         return False
+    
+    def aplicar_daño_por_flor(self, board, posicion):
+        """Aplica daño a la abeja si pasa por una flor con pesticidas."""
+        from flower import Flower
+        celda = board.get_celda(posicion[0], posicion[1])
+        if isinstance(celda, Flower) and celda.esta_viva():
+            daño = celda.get_daño_pesticida()
+            if daño > 0:
+                self.bajar_vida(daño)
+                return daño
+        return 0
 
     def abeja_tocada(self):
         """Baja la vida con daño predeterminado"""
@@ -94,6 +105,11 @@ class Bee():
         if not tablero.es_transitable(pos_destino[0], pos_destino[1]):
             print("La casilla destino no es transitable.")
             return False
+        
+        # Aplicar daño si pasa por una flor con pesticidas
+        daño = self.aplicar_daño_por_flor(tablero, pos_destino)
+        if daño > 0:
+            print(f"¡Daño por pesticida! -{daño} vida")
         
         self.energia -= self.coste_movimiento
         return True
@@ -154,15 +170,17 @@ class Bee():
         return True
     
     def recuperar_energia_en_rusc(self, tablero, posicion):
-        """Recupera energía completa si está en el rusc."""
+        """Recupera energía y vida completa si está en el rusc."""
         fila, col = posicion
         if not tablero.es_rusc(fila, col):
             print("No estás en el rusc.")
             return False
         
         energia_recuperada = self.max_energia - self.energia
+        vida_recuperada = self.max_vida - self.life
         self.energia = self.max_energia
-        print(f"Energía completamente recuperada en el rusc: +{energia_recuperada}")
+        self.life = self.max_vida
+        print(f"En el rusc - Energía: +{energia_recuperada}, Vida: +{vida_recuperada}")
         return True
     
     def calcular_ruta_a_rusc(self, tablero, pos_actual):

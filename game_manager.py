@@ -31,12 +31,12 @@ class GameManager():
         Returns:
             Tupla (terminado, resultado, mensaje)
         """
-        # Verificar victoria
-        if self.verificar_victoria(tablero):
-            self.juego_terminado = True
-            self.resultado = 'VICTORIA'
-            self.mensaje_final = f"🎉 ¡VICTORIA! Has acumulado {tablero.nectar_en_rusc} néctar en el rusc"
-            return True, self.resultado, self.mensaje_final
+        # NO verificar victoria automáticamente - el jugador decide cuándo parar
+        # if self.verificar_victoria(tablero):
+        #     self.juego_terminado = True
+        #     self.resultado = 'VICTORIA'
+        #     self.mensaje_final = f"🎉 ¡VICTORIA! Has acumulado {tablero.nectar_en_rusc} néctar en el rusc"
+        #     return True, self.resultado, self.mensaje_final
         
         # Verificar derrota por muerte de abeja
         if self.verificar_derrota_abeja_muerta(abeja):

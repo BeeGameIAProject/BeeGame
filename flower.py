@@ -10,6 +10,7 @@ class Flower():
         self.polinizacion = polinizacion  # 0: no polinizada, 1: polinizada
         self.pesticidas = pesticidas
         self.viva = True
+        self.turnos_muerta = 0  # Contador de turnos desde que murió
         
     def aplicar_pesticida(self):
         """Aplica una unidad de pesticida. Mata la flor si llega a 3."""
@@ -35,6 +36,7 @@ class Flower():
         """Mata la flor."""
         self.viva = False
         self.vida = 0
+        self.turnos_muerta = 0
     
     def esta_viva(self):
         """Retorna True si la flor está viva."""
@@ -63,7 +65,27 @@ class Flower():
     def get_symbol(self):
         """Retorna el símbolo visual de la flor."""
         if not self.viva:
-            return "💀"
+            return "❌"
         if self.polinizacion:
             return "🌸"
         return "🌼"
+    
+    def incrementar_turno_muerta(self):
+        """Incrementa el contador de turnos muerta."""
+        if not self.viva:
+            self.turnos_muerta += 1
+    
+    def debe_eliminarse(self):
+        """Retorna True si la flor muerta debe eliminarse (después de 1 turno)."""
+        return not self.viva and self.turnos_muerta >= 1
+    
+    def get_daño_pesticida(self):
+        """Retorna el daño que causa la flor según su nivel de pesticida."""
+        if self.pesticidas == 0:
+            return 0
+        elif self.pesticidas == 1:
+            return 5
+        elif self.pesticidas == 2:
+            return 10
+        else:  # 3 o más
+            return 15
