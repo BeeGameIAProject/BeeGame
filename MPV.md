@@ -30,15 +30,15 @@
     - [x] Limitar colocación de obstáculos a un radio de 2 casillas del rusc.
     - [x] Restringir pesticidas solo a casillas con flores.
 ## 3. Integración de Nodos de Azar (Incertidumbre)
-- [ ] **Sistema de Clima (Chance Node 1)**:
-    - [ ] Activar evento cada 4 turnos.
-    - [ ] **Estados y Probabilidades**:
-        - [ ] Lluvia (10%): Resta 1 unidad de pesticida a flores afectadas.
-        - [ ] Sol (15%): +20% probabilidad de reproducción en flores polinizadas.
-        - [ ] Normal (75%): Sin efectos.
-- [ ] **Sistema de Reproducción (Chance Node 2)**:
-    - [ ] Ejecutar tras polinización exitosa.
-    - [ ] Calcular nacimiento de nueva flor basado en probabilidad base (20%) + bonificación climática si aplica.
+- [x] **Sistema de Clima (Chance Node 1)**:
+    - [x] Activar evento cada 4 turnos.
+    - [x] **Estados y Probabilidades**:
+        - [x] Lluvia (10%): Resta 1 unidad de pesticida a flores afectadas.
+        - [x] Sol (15%): +20% probabilidad de reproducción en flores polinizadas.
+        - [x] Normal (75%): Sin efectos.
+- [x] **Sistema de Reproducción (Chance Node 2)**:
+    - [x] Ejecutar tras polinización exitosa.
+    - [x] Calcular nacimiento de nueva flor basado en probabilidad base (20%) + bonificación climática si aplica.
 
 ## 4. Algoritmo de IA (Core)
 - [ ] **Implementación Expectimax**:
