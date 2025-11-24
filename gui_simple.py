@@ -62,7 +62,7 @@ class BeeGameGUI:
         self.BOARD_WIDTH = columnas * self.CELL_SIZE
         self.BOARD_HEIGHT = filas * self.CELL_SIZE
         self.WINDOW_WIDTH = self.BOARD_WIDTH + self.PANEL_WIDTH
-        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT, 800)
+        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 50, 800) # +50 para texto abajo
         
         # Activar anti-aliasing y transparencia
         self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
@@ -104,6 +104,9 @@ class BeeGameGUI:
         self.turno_jugador = True
         self.ultimo_turno_obstaculo = -3
         
+        # Control de flores muertas { (f, c): turno_muerte }
+        self.flores_muertas_timer = {}
+        
         # Animación A*
         self.moviendo_a_star = False
         self.ruta_a_star = []
@@ -116,6 +119,7 @@ class BeeGameGUI:
         self.mensaje_evento_clima = ""
         self.timer_evento_clima = 0
         self.duracion_evento_clima = 180
+        self.mostrar_tooltip_clima = False
         
         # Botones (layout actualizado)
         self.botones = self.crear_botones()
@@ -158,6 +162,17 @@ class BeeGameGUI:
                     self.screen.blit(s, (x, y))
                     pygame.draw.rect(self.screen, (255, 255, 255), (x, y, self.CELL_SIZE, self.CELL_SIZE), 3)
 
+        # Dibujar instrucciones debajo del tablero
+        self.dibujar_instrucciones_control()
+
+    def dibujar_instrucciones_control(self):
+        texto = "Click izquierdo: Moverse  |  Click derecho: Seleccionar casilla"
+        surf = self.font_normal.render(texto, True, C_TEXTO_PRINCIPAL)
+        # Centrar debajo del tablero
+        x = (self.BOARD_WIDTH // 2) - (surf.get_width() // 2)
+        y = self.BOARD_HEIGHT + 15
+        self.screen.blit(surf, (x, y))
+
     def dibujar_contenido_celda(self, fila, col, x, y):
         celda = self.board.grid[fila][col]
         center_x = x + self.CELL_SIZE // 2
@@ -174,7 +189,7 @@ class BeeGameGUI:
         # 3. Dibujar Flor
         elif self.board.es_flor(fila, col):
             flor = self.board.get_celda(fila, col)
-            self.dibujar_flor(center_x, center_y, flor)
+            self.dibujar_flor(center_x, center_y, flor, (fila, col))
 
         # 4. Dibujar Abeja (encima de todo)
         if (fila, col) == self.pos_abeja:
@@ -206,12 +221,31 @@ class BeeGameGUI:
         pygame.draw.line(self.screen, (200, 50, 50), (cx-10, cy-10), (cx+10, cy+10), 3)
         pygame.draw.line(self.screen, (200, 50, 50), (cx+10, cy-10), (cx-10, cy+10), 3)
 
-    def dibujar_flor(self, cx, cy, flor):
+    def dibujar_flor(self, cx, cy, flor, pos_grid):
+        # Gestión de desaparición de flores muertas
         if flor.vida <= 0:
-            # Flor marchita
+            if pos_grid not in self.flores_muertas_timer:
+                self.flores_muertas_timer[pos_grid] = self.turno
+            
+            turnos_muerta = self.turno - self.flores_muertas_timer[pos_grid]
+            
+            # Si han pasado más de 2 turnos desde que murió, no se dibuja (desaparece)
+            if turnos_muerta > 2:
+                return 
+
+            # Dibujar flor marchita
             pygame.draw.line(self.screen, (100, 80, 50), (cx, cy), (cx, cy+20), 3) # Tallo
             pygame.draw.circle(self.screen, (100, 80, 50), (cx, cy-5), 8) # Cabeza muerta
+            
+            # Indicador visual de desvanecimiento (opcional)
+            if turnos_muerta >= 2: # Último turno visible
+                 texto = self.font_small.render("X", True, (50, 0, 0))
+                 self.screen.blit(texto, (cx-5, cy-25))
             return
+
+        # Si la flor revive o es nueva, borrar del timer de muertas
+        if pos_grid in self.flores_muertas_timer:
+            del self.flores_muertas_timer[pos_grid]
 
         # Tallo
         pygame.draw.line(self.screen, (50, 150, 50), (cx, cy+25), (cx, cy), 4)
@@ -290,20 +324,7 @@ class BeeGameGUI:
         self.screen.blit(txt, (x_pad, y))
         y += 50
         
-        # Caja de Turno
-        color_turno = (220, 255, 220) if self.turno_jugador else (255, 220, 220)
-        borde_turno = (50, 150, 50) if self.turno_jugador else (150, 50, 50)
-        texto_turno = "TU TURNO" if self.turno_jugador else "IA PENSANDO..."
-        
-        pygame.draw.rect(self.screen, color_turno, (x_pad, y, 350, 40), border_radius=8)
-        pygame.draw.rect(self.screen, borde_turno, (x_pad, y, 350, 40), 2, border_radius=8)
-        txt_t = self.font_subtitle.render(texto_turno, True, C_TEXTO_PRINCIPAL)
-        self.screen.blit(txt_t, (x_pad + 175 - txt_t.get_width()//2, y + 8))
-        y += 60
-        
-        self.dibujar_separador(y)
-        y += 20
-        
+
         # Sección Estadísticas
         self.dibujar_seccion_stats(x_pad, y)
         y += 200
@@ -391,7 +412,69 @@ class BeeGameGUI:
             
         txt_c = self.font_bold.render(f"Clima: {self.clima_actual}", True, color_txt)
         self.screen.blit(txt_c, (x + 80, y + 20))
+        
+        # Botón de ayuda "?"
+        mouse_pos = pygame.mouse.get_pos()
+        help_rect = pygame.Rect(x + 310, y + 10, 30, 30)
+        hover_help = help_rect.collidepoint(mouse_pos)
+        
+        # Círculo de ayuda
+        color_help = (100, 150, 255) if hover_help else (150, 150, 150)
+        pygame.draw.circle(self.screen, color_help, (x + 325, y + 25), 15)
+        pygame.draw.circle(self.screen, (255, 255, 255), (x + 325, y + 25), 15, 2)
+        
+        # Símbolo "?"
+        txt_help = self.font_subtitle.render("?", True, (255, 255, 255))
+        self.screen.blit(txt_help, (x + 318, y + 12))
+        
+        # Guardar rect para detección de click
+        self.help_clima_rect = help_rect
+        
+        # Mostrar tooltip si está activo
+        if self.mostrar_tooltip_clima:
+            self.dibujar_tooltip_clima(x, y)
 
+    def dibujar_tooltip_clima(self, x, y):
+        """Dibuja un tooltip explicando los estados del clima"""
+        tooltip_width = 320
+        tooltip_height = 180
+        tooltip_x = x + 15
+        tooltip_y = y + 70
+        
+        # Fondo del tooltip con sombra
+        shadow = pygame.Rect(tooltip_x + 3, tooltip_y + 3, tooltip_width, tooltip_height)
+        pygame.draw.rect(self.screen, (0, 0, 0, 100), shadow, border_radius=8)
+        
+        tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
+        pygame.draw.rect(self.screen, (250, 250, 250), tooltip_rect, border_radius=8)
+        pygame.draw.rect(self.screen, (100, 100, 100), tooltip_rect, 2, border_radius=8)
+        
+        # Título
+        titulo = self.font_bold.render("Estados del Clima:", True, C_TEXTO_PRINCIPAL)
+        self.screen.blit(titulo, (tooltip_x + 10, tooltip_y + 10))
+        
+        # Explicaciones
+        explicaciones = [
+            ("☀ Sol:", "Flores regeneran vida más rápido", (255, 200, 0)),
+            ("      Favorece el crecimiento", "", (100, 100, 100)),
+            ("", "", (0, 0, 0)),
+            ("🌧 Lluvia:", "Flores pueden perder vida", C_ENERGIA),
+            ("      Condiciones adversas", "", (100, 100, 100)),
+            ("", "", (0, 0, 0)),
+            ("☁ Normal:", "Sin efectos especiales", C_TEXTO_SECUNDARIO),
+            ("      Balance natural", "", (100, 100, 100)),
+        ]
+        
+        y_offset = tooltip_y + 40
+        for texto, desc, color in explicaciones:
+            if texto:
+                txt = self.font_small.render(texto, True, color)
+                self.screen.blit(txt, (tooltip_x + 15, y_offset))
+                if desc:
+                    txt_desc = self.font_small.render(desc, True, color)
+                    self.screen.blit(txt_desc, (tooltip_x + 100, y_offset))
+            y_offset += 18
+    
     def dibujar_log(self, x, y):
         rect_log = pygame.Rect(x, y, 350, 100)
         pygame.draw.rect(self.screen, (255, 255, 255), rect_log, border_radius=5)
@@ -668,6 +751,11 @@ class BeeGameGUI:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     if event.button == 1: # Left Click
+                        # Check botón de ayuda clima
+                        if hasattr(self, 'help_clima_rect') and self.help_clima_rect.collidepoint(pos):
+                            self.mostrar_tooltip_clima = not self.mostrar_tooltip_clima
+                            continue
+                        
                         # Check botones
                         clicked_btn = False
                         if self.turno_jugador and not self.game_over:
