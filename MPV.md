@@ -1,6 +1,6 @@
 # Lista de MVP (Producto Mínimo Viable) - Proyecto IA
 
-## 1. Entorno de Simulació (Tablero y Lógica)
+## 1. Entorn de Simulació (Tablero y Lógica)
 - [x] **Implementación del Tablero**: Crear una matriz bidimensional de $N \times N$ casillas (dimensiones configurables, p.ej. $20 \times 20$ o $10 \times 10$).
 - [x] **Elementos del Tablero**: Colocación inicial del rusc (colmena), flores y obstáculos.
 - [x] **Lógica de las Flores**:
@@ -29,6 +29,7 @@
     - [x] Limitar aplicación de pesticidas a un radio de 2 casillas de la abeja.
     - [x] Limitar colocación de obstáculos a un radio de 2 casillas del rusc.
     - [x] Restringir pesticidas solo a casillas con flores.
+
 ## 3. Integración de Nodos de Azar (Incertidumbre)
 - [x] **Sistema de Clima (Chance Node 1)**:
     - [x] Activar evento cada 4 turnos.
@@ -63,3 +64,14 @@
 - [x] **Derrota**:
     - [x] Vida de la abeja llega a 0.
     - [x] No quedan flores disponibles en el tablero.
+
+## 7. Interfaz Gráfica y Control (GUI)
+- [x] **Ventana de Juego**:
+    - [x] Implementar librería gráfica (Pygame/Tkinter) para eliminar la terminal.
+    - [x] Renderizar cuadrícula $N \times N$ con sprites/imágenes.
+- [x] **Control de Usuario (Input)**:
+    - [x] Mapear clics de ratón a coordenadas del tablero.
+    - [x] Botones en pantalla para acciones: Polinizar, Descansar, Volver al Rusc ($A^*$).
+- [x] **Feedback Visual**:
+    - [x] Mostrar barras de vida y energía en tiempo real.
+    - [x] Visualizar efectos climáticos (icono de sol/lluvia) y pesticidas (cambio de color en flor).
