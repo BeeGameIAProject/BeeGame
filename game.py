@@ -2,120 +2,116 @@ import bee
 import board
 import humanidad
 import chance_events
+import expectimax
 
 if __name__ == "__main__":
-    # Crear tablero 10x10
-    tablero = board.Board(10, 10)
+    # Crear tablero 8x8 (más pequeño para demo)
+    tablero = board.Board(8, 8)
     
     # Inicializar tablero con rusc, flores y obstáculos
-    tablero.inicializar_tablero(num_flores=15, num_obstaculos=3)
+    tablero.inicializar_tablero(num_flores=10, num_obstaculos=2)
     
     # Crear agentes y sistema de eventos
     abeja = bee.Bee(100)
     humanidad_agente = humanidad.Humanidad()
     eventos_azar = chance_events.ChanceEvents()
     
+    # Crear IA Expectimax
+    ai = expectimax.ExpectimaxAI(max_depth=2)  # Profundidad 2 para demo
+    
     # Mostrar tablero inicial
     print("="*60)
-    print("DEMO MVP3 - NODOS DE AZAR (CLIMA Y REPRODUCCIÓN)")
+    print("DEMO MVP4 - ALGORITMO EXPECTIMAX")
     print("="*60)
     tablero.mostrar_tablero()
     
-    print("\n--- ESTADO INICIAL DE LOS AGENTES ---")
+    print("\n--- CONFIGURACIÓN ---")
     print(f"🐝 Abeja: {abeja.to_string()}")
     print(f"👨 Humanidad: {humanidad_agente.to_string()}")
-    print(f"🌦️  Eventos de azar: Activos (cada {eventos_azar.turnos_para_clima} turnos)")
+    print(f"🤖 IA Expectimax: Profundidad máxima = {ai.max_depth}")
     
     # Posición inicial de la abeja
     pos_abeja = (tablero.rusc_pos[0] - 1, tablero.rusc_pos[1])
     print(f"\nPosición inicial de la abeja: {pos_abeja}")
     
-    # ===== SIMULACIÓN DE VARIOS TURNOS =====
-    for turno in range(1, 9):
+    # ===== SIMULACIÓN CON EXPECTIMAX =====
+    for turno in range(1, 6):
         print("\n" + "="*60)
         print(f"TURNO {turno}")
         print("="*60)
         
         tablero.incrementar_turno()
         
-        # Turno de la abeja (turnos impares)
+        # Turno de la abeja usando Expectimax
         if turno % 2 == 1:
-            print("\n--- ABEJA ---")
-            flores_vivas = tablero.get_flores_vivas()
+            print("\n--- ABEJA (USANDO EXPECTIMAX) ---")
             
-            if flores_vivas and abeja.tiene_energia(abeja.coste_recoleccion):
-                # Buscar flor no polinizada cercana
-                flor_objetivo = None
-                for pos_flor, flor in flores_vivas:
-                    if not flor.esta_polinizada():
-                        flor_objetivo = (pos_flor, flor)
-                        break
+            # Crear estado actual
+            estado_actual = expectimax.GameState(
+                tablero, abeja, pos_abeja, 
+                humanidad_agente, eventos_azar, 
+                tablero.get_turno()
+            )
+            
+            # Obtener mejor acción usando Expectimax
+            print("🤖 Calculando mejor acción con Expectimax...")
+            mejor_accion = ai.get_best_action(estado_actual)
+            print(f"   Nodos explorados: {ai.nodes_explored}")
+            
+            if mejor_accion:
+                tipo_accion, objetivo = mejor_accion
+                print(f"   Mejor acción: {tipo_accion}")
                 
-                if flor_objetivo:
-                    pos_flor, flor = flor_objetivo
-                    print(f"Recolectando néctar en {pos_flor}")
-                    abeja.recoger_nectar_y_polinizar(tablero, pos_flor)
-                    print(f"Estado: {abeja.to_string()}")
-                else:
-                    print("Todas las flores están polinizadas. Descansando...")
+                if tipo_accion == 'recoger':
+                    print(f"   Objetivo: Recoger néctar en {objetivo}")
+                    abeja.recoger_nectar_y_polinizar(tablero, objetivo)
+                    pos_abeja = objetivo
+                
+                elif tipo_accion == 'mover':
+                    print(f"   Objetivo: Moverse a {objetivo}")
+                    if abeja.mover(tablero, pos_abeja, objetivo):
+                        pos_abeja = objetivo
+                
+                elif tipo_accion == 'descansar':
+                    print(f"   Objetivo: Descansar")
                     abeja.descansar()
+                
+                elif tipo_accion == 'descargar':
+                    print(f"   Objetivo: Descargar néctar en rusc")
+                    abeja.descargar_nectar_en_rusc(tablero, pos_abeja)
+                    abeja.recuperar_energia_en_rusc(tablero, pos_abeja)
+                
+                print(f"   Estado: {abeja.to_string()}")
             else:
-                print("Descansando para recuperar energía...")
-                abeja.descansar()
+                print("   No hay acciones disponibles")
         
-        # Turno de la humanidad (turnos pares)
+        # Turno de la humanidad (sin IA, acción aleatoria)
         else:
             print("\n--- HUMANIDAD ---")
             acciones = humanidad_agente.obtener_acciones_validas(tablero, pos_abeja)
             
             if acciones:
-                # Priorizar pesticidas
-                pesticidas = [a for a in acciones if a[0] == 'pesticida']
-                if pesticidas:
-                    accion = pesticidas[0]
-                    print(f"Aplicando pesticida en {accion[1]}")
-                    humanidad_agente.ejecutar_accion(tablero, accion, pos_abeja)
-                else:
-                    # Si no hay pesticidas, colocar obstáculo
-                    obstaculos = [a for a in acciones if a[0] == 'obstaculo']
-                    if obstaculos:
-                        accion = obstaculos[0]
-                        print(f"Colocando obstáculo en {accion[1]}")
-                        humanidad_agente.ejecutar_accion(tablero, accion, pos_abeja)
+                # Elegir acción aleatoria
+                import random
+                accion = random.choice(acciones)
+                tipo_accion, pos = accion
+                print(f"Acción: {tipo_accion} en {pos}")
+                humanidad_agente.ejecutar_accion(tablero, accion, pos_abeja)
             else:
-                print("Sin acciones válidas disponibles")
+                print("Sin acciones válidas")
         
-        # ===== EVENTOS DE AZAR (CHANCE NODES) =====
+        # Eventos de azar
         print("\n--- EVENTOS DE AZAR ---")
         eventos = eventos_azar.ejecutar_eventos_turno(tablero, tablero.get_turno())
         
         if eventos["evento_clima"]:
-            print(f"\n🌦️  ¡EVENTO CLIMÁTICO! {eventos['clima']}")
-            
-            # Mostrar efectos del clima
-            stats_clima = eventos["stats_clima"]
-            if eventos["clima"] == "Lluvia":
-                print(f"   💧 Lluvia: {stats_clima['pesticidas_reducidos']} pesticidas reducidos en {stats_clima['flores_afectadas']} flores")
-            elif eventos["clima"] == "Sol":
-                print(f"   ☀️  Sol: {stats_clima.get('mensaje', 'Bonificación a reproducción')}")
-            else:
-                print(f"   ⛅ Normal: Sin efectos")
-            
-            # Mostrar reproducción
-            stats_repro = eventos["stats_reproduccion"]
-            print(f"\n🌸 REPRODUCCIÓN:")
-            print(f"   - Flores polinizadas: {stats_repro['flores_polinizadas']}")
-            print(f"   - Probabilidad actual: {stats_repro['probabilidad']*100:.0f}%")
-            print(f"   - Nuevas flores nacidas: {stats_repro['flores_nuevas']}")
-            
-            if stats_repro['flores_nuevas'] > 0:
-                print(f"   - Posiciones: {stats_repro['posiciones_nuevas']}")
+            print(f"🌦️  Clima: {eventos['clima']}")
+            if eventos['stats_reproduccion']['flores_nuevas'] > 0:
+                print(f"   🌸 {eventos['stats_reproduccion']['flores_nuevas']} nuevas flores!")
         else:
-            clima_actual = eventos_azar.get_clima_actual()
-            print(f"Clima actual: {clima_actual} (próximo evento en turno {((tablero.get_turno() // 4) + 1) * 4})")
+            print(f"Clima: {eventos_azar.get_clima_actual()}")
         
-        # Mostrar estadísticas del turno
-        print(f"\n📊 Flores vivas: {tablero.contar_flores_vivas()} | Néctar en rusc: {tablero.nectar_en_rusc}")
+        print(f"\n📊 Flores: {tablero.contar_flores_vivas()} | Néctar rusc: {tablero.nectar_en_rusc}")
     
     # ===== RESUMEN FINAL =====
     print("\n" + "="*60)
@@ -128,8 +124,6 @@ if __name__ == "__main__":
     print("="*60)
     print(f"Turnos simulados: {tablero.get_turno()}")
     print(f"Estado abeja: {abeja.to_string()}")
-    print(f"Flores totales: {len(tablero.flores)}")
     print(f"Flores vivas: {tablero.contar_flores_vivas()}")
-    print(f"Flores polinizadas: {sum(1 for _, f in tablero.flores if f.esta_viva() and f.esta_polinizada())}")
-    print(f"Néctar acumulado en rusc: {tablero.nectar_en_rusc}")
-    print(f"Clima actual: {eventos_azar.get_clima_actual()}")
+    print(f"Néctar en rusc: {tablero.nectar_en_rusc}")
+    print(f"Total nodos explorados por Expectimax: {ai.nodes_explored}")

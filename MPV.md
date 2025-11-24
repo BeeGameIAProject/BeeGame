@@ -41,12 +41,12 @@
     - [x] Calcular nacimiento de nueva flor basado en probabilidad base (20%) + bonificación climática si aplica.
 
 ## 4. Algoritmo de IA (Core)
-- [ ] **Implementación Expectimax**:
-    - [ ] Crear función recursiva `expectimax(estado, profundidad, agente)`.
-    - [ ] Gestionar nodos MAX (Abeja): Seleccionar mejor valor.
-    - [ ] Gestionar nodos MIN (Humanidad): Seleccionar peor valor para MAX.
-    - [ ] Gestionar nodos CHANCE (Clima/Reproducción): Calcular media ponderada por probabilidad.
-- [ ] **Limitación de Profundidad**: Establecer profundidad máxima de búsqueda para viabilidad computacional.
+- [x] **Implementación Expectimax**:
+    - [x] Crear función recursiva `expectimax(estado, profundidad, agente)`.
+    - [x] Gestionar nodos MAX (Abeja): Seleccionar mejor valor.
+    - [x] Gestionar nodos MIN (Humanidad): Seleccionar peor valor para MAX.
+    - [x] Gestionar nodos CHANCE (Clima/Reproducción): Calcular media ponderada por probabilidad.
+- [x] **Limitación de Profundidad**: Establecer profundidad máxima de búsqueda para viabilidad computacional.
 
 ## 5. Heurística y Evaluación
 - [ ] **Función Heurística $H(s)$**: Implementar fórmula de evaluación de estado para nodos hoja/límite.
