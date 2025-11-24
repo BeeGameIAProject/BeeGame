@@ -429,51 +429,106 @@ class BeeGameGUI:
         
         # Guardar rect para detección de click
         self.help_clima_rect = help_rect
-        
-        # Mostrar tooltip si está activo
-        if self.mostrar_tooltip_clima:
-            self.dibujar_tooltip_clima(x, y)
 
     def dibujar_tooltip_clima(self, x, y):
         """Dibuja un tooltip explicando los estados del clima"""
-        tooltip_width = 320
-        tooltip_height = 180
-        tooltip_x = x + 15
-        tooltip_y = y + 70
+        tooltip_width = 400
+        tooltip_height = 280
+        # Centrar el popup en la pantalla
+        tooltip_x = (self.WINDOW_WIDTH - tooltip_width) // 2
+        tooltip_y = (self.WINDOW_HEIGHT - tooltip_height) // 2
         
-        # Fondo del tooltip con sombra
-        shadow = pygame.Rect(tooltip_x + 3, tooltip_y + 3, tooltip_width, tooltip_height)
-        pygame.draw.rect(self.screen, (0, 0, 0, 100), shadow, border_radius=8)
+        # Overlay oscuro de fondo
+        overlay = pygame.Surface((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
         
+        # Fondo del tooltip con sombra suave
+        shadow = pygame.Rect(tooltip_x + 6, tooltip_y + 6, tooltip_width, tooltip_height)
+        shadow_surf = pygame.Surface((tooltip_width, tooltip_height), pygame.SRCALPHA)
+        pygame.draw.rect(shadow_surf, (0, 0, 0, 60), (0, 0, tooltip_width, tooltip_height), border_radius=15)
+        self.screen.blit(shadow_surf, (tooltip_x + 6, tooltip_y + 6))
+        
+        # Fondo principal
         tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
-        pygame.draw.rect(self.screen, (250, 250, 250), tooltip_rect, border_radius=8)
-        pygame.draw.rect(self.screen, (100, 100, 100), tooltip_rect, 2, border_radius=8)
+        pygame.draw.rect(self.screen, (255, 255, 255), tooltip_rect, border_radius=15)
+        pygame.draw.rect(self.screen, (180, 180, 180), tooltip_rect, 2, border_radius=15)
         
-        # Título
-        titulo = self.font_bold.render("Estados del Clima:", True, C_TEXTO_PRINCIPAL)
-        self.screen.blit(titulo, (tooltip_x + 10, tooltip_y + 10))
+        # Botón cerrar (X) - arriba a la derecha
+        close_x = tooltip_x + tooltip_width - 40
+        close_y = tooltip_y + 12
+        close_rect = pygame.Rect(close_x, close_y, 28, 28)
         
-        # Explicaciones
-        explicaciones = [
-            ("☀ Sol:", "Flores regeneran vida más rápido", (255, 200, 0)),
-            ("      Favorece el crecimiento", "", (100, 100, 100)),
-            ("", "", (0, 0, 0)),
-            ("🌧 Lluvia:", "Flores pueden perder vida", C_ENERGIA),
-            ("      Condiciones adversas", "", (100, 100, 100)),
-            ("", "", (0, 0, 0)),
-            ("☁ Normal:", "Sin efectos especiales", C_TEXTO_SECUNDARIO),
-            ("      Balance natural", "", (100, 100, 100)),
-        ]
+        mouse_pos = pygame.mouse.get_pos()
+        hover_close = close_rect.collidepoint(mouse_pos)
         
-        y_offset = tooltip_y + 40
-        for texto, desc, color in explicaciones:
-            if texto:
-                txt = self.font_small.render(texto, True, color)
-                self.screen.blit(txt, (tooltip_x + 15, y_offset))
-                if desc:
-                    txt_desc = self.font_small.render(desc, True, color)
-                    self.screen.blit(txt_desc, (tooltip_x + 100, y_offset))
-            y_offset += 18
+        color_close_bg = (220, 60, 60) if hover_close else (200, 200, 200)
+        pygame.draw.circle(self.screen, color_close_bg, (close_x + 14, close_y + 14), 14)
+        
+        close_txt = self.font_bold.render("✕", True, (255, 255, 255))
+        self.screen.blit(close_txt, (close_x + 6, close_y + 2))
+        
+        # Guardar rect para cerrar con click
+        self.close_tooltip_rect = close_rect
+        
+        # Título principal
+        titulo = self.font_subtitle.render("Estados del Clima", True, (40, 40, 40))
+        titulo_x = tooltip_x + (tooltip_width - titulo.get_width()) // 2
+        self.screen.blit(titulo, (titulo_x, tooltip_y + 20))
+        
+        # Línea separadora elegante
+        pygame.draw.line(self.screen, (220, 220, 220), 
+                        (tooltip_x + 30, tooltip_y + 60), 
+                        (tooltip_x + tooltip_width - 30, tooltip_y + 60), 2)
+        
+        # Margen interno
+        margin_x = tooltip_x + 30
+        y_offset = tooltip_y + 80
+        spacing = 62
+        
+        # === LLUVIA ===
+        # Icono de fondo
+        pygame.draw.circle(self.screen, (230, 240, 255), (margin_x + 25, y_offset + 20), 22)
+        lluvia_icon = self.font_title.render("🌧", True, (52, 152, 219))
+        self.screen.blit(lluvia_icon, (margin_x + 10, y_offset + 2))
+        
+        lluvia_titulo = self.font_bold.render("Lluvia (10%)", True, (52, 152, 219))
+        self.screen.blit(lluvia_titulo, (margin_x + 60, y_offset + 5))
+        
+        lluvia_desc1 = self.font_small.render("Reduce -1 pesticida a las flores afectadas", True, (70, 70, 70))
+        self.screen.blit(lluvia_desc1, (margin_x + 60, y_offset + 28))
+        lluvia_desc2 = self.font_small.render("(limpia la contaminación)", True, (120, 120, 120))
+        self.screen.blit(lluvia_desc2, (margin_x + 60, y_offset + 44))
+        
+        y_offset += spacing
+        
+        # === SOL ===
+        pygame.draw.circle(self.screen, (255, 250, 230), (margin_x + 25, y_offset + 20), 22)
+        sol_icon = self.font_title.render("☀", True, (255, 180, 0))
+        self.screen.blit(sol_icon, (margin_x + 10, y_offset + 2))
+        
+        sol_titulo = self.font_bold.render("Sol (15%)", True, (230, 150, 0))
+        self.screen.blit(sol_titulo, (margin_x + 60, y_offset + 5))
+        
+        sol_desc1 = self.font_small.render("+20% probabilidad de reproducción", True, (70, 70, 70))
+        self.screen.blit(sol_desc1, (margin_x + 60, y_offset + 28))
+        sol_desc2 = self.font_small.render("de flores polinizadas", True, (120, 120, 120))
+        self.screen.blit(sol_desc2, (margin_x + 60, y_offset + 44))
+        
+        y_offset += spacing
+        
+        # === NORMAL ===
+        pygame.draw.circle(self.screen, (245, 245, 245), (margin_x + 25, y_offset + 20), 22)
+        normal_icon = self.font_title.render("☁", True, (150, 150, 150))
+        self.screen.blit(normal_icon, (margin_x + 10, y_offset + 2))
+        
+        normal_titulo = self.font_bold.render("Normal (75%)", True, (100, 100, 100))
+        self.screen.blit(normal_titulo, (margin_x + 60, y_offset + 5))
+        
+        normal_desc = self.font_small.render("Sin efectos especiales", True, (70, 70, 70))
+        self.screen.blit(normal_desc, (margin_x + 60, y_offset + 28))
+        normal_desc2 = self.font_small.render("Condiciones climáticas estables", True, (120, 120, 120))
+        self.screen.blit(normal_desc2, (margin_x + 60, y_offset + 44))
     
     def dibujar_log(self, x, y):
         rect_log = pygame.Rect(x, y, 350, 100)
@@ -751,9 +806,19 @@ class BeeGameGUI:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     if event.button == 1: # Left Click
+                        # Check botón cerrar tooltip (si está visible)
+                        if self.mostrar_tooltip_clima and hasattr(self, 'close_tooltip_rect') and self.close_tooltip_rect.collidepoint(pos):
+                            self.mostrar_tooltip_clima = False
+                            continue
+                        
                         # Check botón de ayuda clima
                         if hasattr(self, 'help_clima_rect') and self.help_clima_rect.collidepoint(pos):
                             self.mostrar_tooltip_clima = not self.mostrar_tooltip_clima
+                            continue
+                        
+                        # Si el tooltip está visible, cerrar con cualquier click fuera
+                        if self.mostrar_tooltip_clima:
+                            self.mostrar_tooltip_clima = False
                             continue
                         
                         # Check botones
@@ -788,6 +853,10 @@ class BeeGameGUI:
             self.dibujar_panel_info()
             self.dibujar_botones()
             self.dibujar_evento_climatico()
+            
+            # Dibujar tooltip clima AL FINAL para que esté por encima de todo
+            if self.mostrar_tooltip_clima:
+                self.dibujar_tooltip_clima(0, 0)
             
             if self.game_over:
                 # Overlay simple Game Over
