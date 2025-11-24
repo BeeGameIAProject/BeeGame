@@ -3,6 +3,7 @@ import random
 from bee import Bee
 from humanidad import Humanidad
 from chance_events import ChanceEvents
+from heuristica import Heuristica
 
 class GameState():
     """
@@ -42,9 +43,10 @@ class ExpectimaxAI():
     Gestiona nodos MAX, MIN y CHANCE.
     """
     
-    def __init__(self, max_depth=3):
+    def __init__(self, max_depth=3, heuristica=None):
         self.max_depth = max_depth
         self.nodes_explored = 0
+        self.heuristica = heuristica if heuristica else Heuristica()
     
     def get_best_action(self, estado):
         """
@@ -277,37 +279,10 @@ class ExpectimaxAI():
     
     def evaluar_estado(self, estado):
         """
-        Función heurística básica para evaluar un estado.
-        Esta es una versión simplificada, se refinará en MVP5.
+        Función heurística para evaluar un estado.
+        Usa la heurística completa implementada en heuristica.py.
         """
-        if not estado.abeja.esta_viva():
-            return -10000
-        
-        if estado.tablero.contar_flores_vivas() == 0:
-            return -10000
-        
-        if estado.tablero.nectar_en_rusc >= 100:
-            return 10000
-        
-        # Heurística simple
-        valor = 0
-        
-        # Valorar néctar en rusc
-        valor += estado.tablero.nectar_en_rusc * 10
-        
-        # Valorar néctar cargado
-        valor += estado.abeja.nectar_cargado * 5
-        
-        # Valorar energía de la abeja
-        valor += estado.abeja.energia * 0.5
-        
-        # Valorar vida de la abeja
-        valor += estado.abeja.life * 2
-        
-        # Valorar flores vivas
-        valor += estado.tablero.contar_flores_vivas() * 3
-        
-        return valor
+        return self.heuristica.evaluar(estado)
 
 
 if __name__ == "__main__":

@@ -49,14 +49,14 @@
 - [x] **Limitación de Profundidad**: Establecer profundidad máxima de búsqueda para viabilidad computacional.
 
 ## 5. Heurística y Evaluación
-- [ ] **Función Heurística $H(s)$**: Implementar fórmula de evaluación de estado para nodos hoja/límite.
-    - [ ] Fórmula: $H(s) = H_{tauler} + H_{agent} + H_{progrés} + H_{proximitat}$.
-- [ ] **Componentes Heurísticos**:
-    - [ ] $H_{tauler}$: Valorar flores sanas y polinizadas vs. contaminadas.
-    - [ ] $H_{agent}$: Valorar vida y energía de la abeja.
-    - [ ] $H_{progrés}$: Valorar néctar en rusc y néctar cargado.
-    - [ ] $H_{proximitat}$: Valorar distancia a objetivos según estado del inventario.
-- [ ] **Ajuste de Pesos**: Definir variables para los pesos ($w_1$ a $w_7$) para calibración.
+- [x] **Función Heurística $H(s)$**: Implementar fórmula de evaluación de estado para nodos hoja/límite.
+    - [x] Fórmula: $H(s) = H_{tauler} + H_{agent} + H_{progrés} + H_{proximitat}$.
+- [x] **Componentes Heurísticos**:
+    - [x] $H_{tauler}$: Valorar flores sanas y polinizadas vs. contaminadas.
+    - [x] $H_{agent}$: Valorar vida y energía de la abeja.
+    - [x] $H_{progrés}$: Valorar néctar en rusc y néctar cargado.
+    - [x] $H_{proximitat}$: Valorar distancia a objetivos según estado del inventario.
+- [x] **Ajuste de Pesos**: Definir variables para los pesos ($w_1$ a $w_7$) para calibración.
 
 ## 6. Condiciones de Finalización
 - [ ] **Victoria**: La abeja acumula la cantidad objetivo de néctar.

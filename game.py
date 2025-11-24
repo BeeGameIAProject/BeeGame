@@ -3,6 +3,7 @@ import board
 import humanidad
 import chance_events
 import expectimax
+from heuristica import Heuristica
 
 if __name__ == "__main__":
     # Crear tablero 8x8 (más pequeño para demo)
@@ -16,12 +17,23 @@ if __name__ == "__main__":
     humanidad_agente = humanidad.Humanidad()
     eventos_azar = chance_events.ChanceEvents()
     
-    # Crear IA Expectimax
-    ai = expectimax.ExpectimaxAI(max_depth=2)  # Profundidad 2 para demo
+    # Crear heurística personalizada
+    heuristica = Heuristica(
+        w1=10,  # Flores vivas
+        w2=8,   # Flores polinizadas
+        w3=15,  # Néctar en rusc
+        w4=5,   # Néctar cargado
+        w5=3,   # Vida abeja
+        w6=2,   # Energía abeja
+        w7=1    # Proximidad
+    )
+    
+    # Crear IA Expectimax con heurística
+    ai = expectimax.ExpectimaxAI(max_depth=2, heuristica=heuristica)
     
     # Mostrar tablero inicial
     print("="*60)
-    print("DEMO MVP4 - ALGORITMO EXPECTIMAX")
+    print("DEMO MVP5 - HEURÍSTICA COMPLETA")
     print("="*60)
     tablero.mostrar_tablero()
     
@@ -29,6 +41,8 @@ if __name__ == "__main__":
     print(f"🐝 Abeja: {abeja.to_string()}")
     print(f"👨 Humanidad: {humanidad_agente.to_string()}")
     print(f"🤖 IA Expectimax: Profundidad máxima = {ai.max_depth}")
+    print(f"\n📊 Heurística:")
+    print(heuristica.to_string())
     
     # Posición inicial de la abeja
     pos_abeja = (tablero.rusc_pos[0] - 1, tablero.rusc_pos[1])
@@ -57,6 +71,10 @@ if __name__ == "__main__":
             print("🤖 Calculando mejor acción con Expectimax...")
             mejor_accion = ai.get_best_action(estado_actual)
             print(f"   Nodos explorados: {ai.nodes_explored}")
+            
+            # Evaluar estado actual
+            valor_actual = ai.heuristica.evaluar(estado_actual)
+            print(f"   Valor heurístico del estado: {valor_actual:.2f}")
             
             if mejor_accion:
                 tipo_accion, objetivo = mejor_accion
