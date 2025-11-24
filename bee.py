@@ -1,16 +1,25 @@
 import board
+import heapq
+
 class Bee():
     
-    def  __init__(self,life, first_move=True,name="🐝",player_name="Bee"):
+    def  __init__(self, life, energia=100, capacidad_nectar=50, first_move=True, name="🐝", player_name="Bee"):
         self.life = life
+        self.max_vida = life
+        self.energia = energia
+        self.max_energia = energia
+        self.nectar_cargado = 0
+        self.capacidad_nectar = capacidad_nectar
         self.first_move = first_move
         self.name = name
         self.player_name = player_name
         self.daño_ataque = 10
-        self.max_vida = life
+        self.coste_movimiento = 5  # Energía que cuesta moverse
+        self.coste_recoleccion = 3  # Energía que cuesta recoger néctar
+        self.nectar_por_flor = 10  # Cantidad de néctar que se obtiene por flor
     
     def to_string(self):
-        return f"Life: {self.life}, Juega primero: {self.first_move}, Icono: {self.name}, Nombre jugador: {self.player_name}"
+        return f"Life: {self.life}/{self.max_vida}, Energía: {self.energia}/{self.max_energia}, Néctar: {self.nectar_cargado}/{self.capacidad_nectar}, Icono: {self.name}"
     
     def is_valid_move(self,board,start,to):
         """Comprueba si el movimiento es válido (estilo rey de ajedrez)."""
@@ -63,7 +72,146 @@ class Bee():
         return m    
     def esta_viva(self):
         """Devuelve True si la abeja sigue viva."""
-        return self.life >= 0
+        return self.life > 0
+    
+    def tiene_energia(self, cantidad):
+        """Verifica si la abeja tiene suficiente energía."""
+        return self.energia >= cantidad
+    
+    def puede_cargar_nectar(self):
+        """Verifica si la abeja puede cargar más néctar."""
+        return self.nectar_cargado < self.capacidad_nectar
+    
+    def mover(self, tablero, pos_actual, pos_destino):
+        """Mueve la abeja a una nueva posición. Retorna True si fue exitoso."""
+        if not self.tiene_energia(self.coste_movimiento):
+            print("No hay suficiente energía para moverse.")
+            return False
+        
+        if not self.is_valid_move(tablero, pos_actual, pos_destino):
+            return False
+        
+        if not tablero.es_transitable(pos_destino[0], pos_destino[1]):
+            print("La casilla destino no es transitable.")
+            return False
+        
+        self.energia -= self.coste_movimiento
+        return True
+    
+    def recoger_nectar_y_polinizar(self, tablero, posicion):
+        """Recoge néctar de una flor y la poliniza. Retorna True si fue exitoso."""
+        if not self.tiene_energia(self.coste_recoleccion):
+            print("No hay suficiente energía para recoger néctar.")
+            return False
+        
+        if not self.puede_cargar_nectar():
+            print("La capacidad de néctar está llena.")
+            return False
+        
+        fila, col = posicion
+        if not tablero.es_flor(fila, col):
+            print("No hay una flor en esta posición.")
+            return False
+        
+        flor = tablero.get_celda(fila, col)
+        if not flor.esta_viva():
+            print("La flor está muerta.")
+            return False
+        
+        # Polinizar la flor
+        flor.polinizar()
+        
+        # Recoger néctar
+        cantidad_recolectada = min(self.nectar_por_flor, self.capacidad_nectar - self.nectar_cargado)
+        self.nectar_cargado += cantidad_recolectada
+        self.energia -= self.coste_recoleccion
+        
+        print(f"Néctar recolectado: {cantidad_recolectada}. Flor polinizada.")
+        return True
+    
+    def descansar(self, cantidad=20):
+        """Recupera energía descansando."""
+        self.energia += cantidad
+        if self.energia > self.max_energia:
+            self.energia = self.max_energia
+        print(f"Descansando... Energía recuperada: +{cantidad}")
+        return True
+    
+    def descargar_nectar_en_rusc(self, tablero, posicion):
+        """Descarga el néctar en el rusc si la abeja está en esa posición."""
+        fila, col = posicion
+        if not tablero.es_rusc(fila, col):
+            print("No estás en el rusc.")
+            return False
+        
+        if self.nectar_cargado == 0:
+            print("No tienes néctar para descargar.")
+            return False
+        
+        tablero.agregar_nectar_al_rusc(self.nectar_cargado)
+        print(f"Néctar descargado en el rusc: {self.nectar_cargado}")
+        self.nectar_cargado = 0
+        return True
+    
+    def recuperar_energia_en_rusc(self, tablero, posicion):
+        """Recupera energía completa si está en el rusc."""
+        fila, col = posicion
+        if not tablero.es_rusc(fila, col):
+            print("No estás en el rusc.")
+            return False
+        
+        energia_recuperada = self.max_energia - self.energia
+        self.energia = self.max_energia
+        print(f"Energía completamente recuperada en el rusc: +{energia_recuperada}")
+        return True
+    
+    def calcular_ruta_a_rusc(self, tablero, pos_actual):
+        """Calcula la ruta óptima al rusc usando el algoritmo A*."""
+        return self.a_star(tablero, pos_actual, tablero.rusc_pos)
+    
+    def a_star(self, tablero, inicio, objetivo):
+        """Implementa el algoritmo A* para encontrar la ruta óptima.
+        Retorna una lista de posiciones desde inicio hasta objetivo.
+        """
+        def heuristica(pos1, pos2):
+            # Distancia Manhattan
+            return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+        
+        # Cola de prioridad: (f, g, posicion, camino)
+        open_set = []
+        heapq.heappush(open_set, (0, 0, inicio, [inicio]))
+        
+        # Conjunto de nodos visitados
+        closed_set = set()
+        
+        while open_set:
+            f, g, actual, camino = heapq.heappop(open_set)
+            
+            if actual == objetivo:
+                return camino
+            
+            if actual in closed_set:
+                continue
+            
+            closed_set.add(actual)
+            
+            # Explorar vecinos
+            vecinos = self.next_moves(tablero, actual)
+            for vecino in vecinos:
+                if vecino in closed_set:
+                    continue
+                
+                if not tablero.es_transitable(vecino[0], vecino[1]):
+                    continue
+                
+                g_nuevo = g + 1
+                h = heuristica(vecino, objetivo)
+                f_nuevo = g_nuevo + h
+                
+                nuevo_camino = camino + [vecino]
+                heapq.heappush(open_set, (f_nuevo, g_nuevo, vecino, nuevo_camino))
+        
+        return []  # No se encontró ruta
 
     def printname(self):
         print(self.name)

@@ -12,23 +12,23 @@
 
 ## 2. Agentes Principales
 ### 2.1 Agente MAX (Abeja - Controlado por Jugador)
-- [ ] **Atributos**: Implementar vida, energía y capacidad de almacenamiento de néctar.
-- [ ] **Acciones Básicas**:
-    - [ ] Moverse por el tablero (coste de energía).
-    - [ ] Recoger néctar y polinizar flores.
-    - [ ] Descansar (recuperar energía).
-- [ ] **Acción Especial (Algoritmo A*)**:
-    - [ ] Implementar botón "volver al rusc".
-    - [ ] Calcular ruta óptima usando algoritmo de búsqueda $A^{*}$ ($f(n) = g(n) + h(n)$).
+- [x] **Atributos**: Implementar vida, energía y capacidad de almacenamiento de néctar.
+- [x] **Acciones Básicas**:
+    - [x] Moverse por el tablero (coste de energía).
+    - [x] Recoger néctar y polinizar flores.
+    - [x] Descansar (recuperar energía).
+- [x] **Acción Especial (Algoritmo A*)**:
+    - [x] Implementar botón "volver al rusc".
+    - [x] Calcular ruta óptima usando algoritmo de búsqueda $A^{*}$ ($f(n) = g(n) + h(n)$).
 
 ### 2.2 Agente MIN (Humanidad - Controlado por IA)
-- [ ] **Acciones**:
-    - [ ] Aplicar pesticidas (daña flores).
-    - [ ] Colocar obstáculos (bloquea paso).
-- [ ] **Restricciones de Acción (Poda Estratégica)**:
-    - [ ] Limitar aplicación de pesticidas a un radio de 2 casillas de la abeja.
-    - [ ] Limitar colocación de obstáculos a un radio de 2 casillas del rusc.
-    - [ ] Restringir pesticidas solo a casillas con flores.
+- [x] **Acciones**:
+    - [x] Aplicar pesticidas (daña flores).
+    - [x] Colocar obstáculos (bloquea paso).
+- [x] **Restricciones de Acción (Poda Estratégica)**:
+    - [x] Limitar aplicación de pesticidas a un radio de 2 casillas de la abeja.
+    - [x] Limitar colocación de obstáculos a un radio de 2 casillas del rusc.
+    - [x] Restringir pesticidas solo a casillas con flores.
 ## 3. Integración de Nodos de Azar (Incertidumbre)
 - [ ] **Sistema de Clima (Chance Node 1)**:
     - [ ] Activar evento cada 4 turnos.
