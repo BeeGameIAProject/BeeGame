@@ -63,11 +63,13 @@ class BeeGameGUI:
         
         # Variables de control
         self.turno = 0
-        self.mensaje = "Haz click en una celda para mover la abeja"
+        self.mensaje = "TU TURNO: Haz click en una celda o usa los botones"
         self.clima_actual = "Normal"
         self.game_over = False
         self.resultado = None
         self.celda_seleccionada = None
+        self.turno_jugador = True  # True = turno del jugador, False = turno humanidad
+        self.ultimo_turno_obstaculo = -3  # Para controlar obstáculos cada 3 turnos
         
         # Botones
         self.botones = self.crear_botones()
@@ -173,6 +175,20 @@ class BeeGameGUI:
         # Turno
         texto = self.font_normal.render(f"Turno: {self.turno}", True, NEGRO)
         self.screen.blit(texto, (x_panel, y_offset))
+        y_offset += 30
+        
+        # Indicador de turno
+        if self.turno_jugador:
+            color_turno = VERDE
+            texto_turno = "TU TURNO"
+        else:
+            color_turno = ROJO
+            texto_turno = "HUMANIDAD"
+        
+        pygame.draw.rect(self.screen, color_turno, (x_panel, y_offset, 250, 25))
+        pygame.draw.rect(self.screen, NEGRO, (x_panel, y_offset, 250, 25), 2)
+        texto = self.font_normal.render(texto_turno, True, BLANCO if not self.turno_jugador else NEGRO)
+        self.screen.blit(texto, (x_panel + 70, y_offset + 2))
         y_offset += 40
         
         # --- Estado de la Abeja ---
@@ -253,8 +269,11 @@ class BeeGameGUI:
     
     def dibujar_botones(self):
         """Dibuja los botones de control"""
+        # Deshabilitar botones si no es turno del jugador
+        activo = self.turno_jugador and not self.game_over
+        
         # Recoger néctar
-        color = VERDE if not self.game_over else GRIS
+        color = VERDE if activo else GRIS
         pygame.draw.rect(self.screen, color, self.botones['recoger'])
         pygame.draw.rect(self.screen, NEGRO, self.botones['recoger'], 2)
         texto = self.font_small.render("Recoger", True, NEGRO)
@@ -267,24 +286,27 @@ class BeeGameGUI:
         self.screen.blit(texto, (self.botones['descansar'].x + 15, self.botones['descansar'].y + 10))
         
         # A* al rusc
-        pygame.draw.rect(self.screen, AZUL if not self.game_over else GRIS, self.botones['a_star'])
+        color_a = AZUL if activo else GRIS
+        pygame.draw.rect(self.screen, color_a, self.botones['a_star'])
         pygame.draw.rect(self.screen, NEGRO, self.botones['a_star'], 2)
-        texto = self.font_small.render("A* al Rusc", True, BLANCO)
+        texto = self.font_small.render("A* al Rusc", True, BLANCO if activo else NEGRO)
         self.screen.blit(texto, (self.botones['a_star'].x + 25, self.botones['a_star'].y + 10))
         
         # Descargar néctar
-        pygame.draw.rect(self.screen, NARANJA if not self.game_over else GRIS, self.botones['descargar'])
+        color_d = NARANJA if activo else GRIS
+        pygame.draw.rect(self.screen, color_d, self.botones['descargar'])
         pygame.draw.rect(self.screen, NEGRO, self.botones['descargar'], 2)
         texto = self.font_small.render("Descargar", True, NEGRO)
         self.screen.blit(texto, (self.botones['descargar'].x + 15, self.botones['descargar'].y + 10))
         
-        # Siguiente turno (Humanidad)
-        color = ROJO if not self.game_over else GRIS
-        pygame.draw.rect(self.screen, color, self.botones['siguiente'])
-        pygame.draw.rect(self.screen, NEGRO, self.botones['siguiente'], 3)
-        texto_btn = "TURNO HUMANIDAD" if not self.game_over else "GAME OVER"
-        texto = self.font_normal.render(texto_btn, True, BLANCO)
-        self.screen.blit(texto, (self.botones['siguiente'].x + 10, self.botones['siguiente'].y + 12))
+        # Info: Ya no hay botón "siguiente turno" porque se ejecuta automáticamente
+        info_rect = self.botones['siguiente']
+        pygame.draw.rect(self.screen, GRIS_OSCURO, info_rect)
+        pygame.draw.rect(self.screen, NEGRO, info_rect, 2)
+        texto = self.font_small.render("Los turnos son", True, BLANCO)
+        self.screen.blit(texto, (info_rect.x + 20, info_rect.y + 5))
+        texto = self.font_small.render("automaticos", True, BLANCO)
+        self.screen.blit(texto, (info_rect.x + 30, info_rect.y + 25))
     
     def dibujar_game_over(self):
         """Dibuja pantalla de game over"""
@@ -333,7 +355,7 @@ class BeeGameGUI:
     
     def mover_abeja(self, destino):
         """Mueve la abeja a una celda destino"""
-        if self.game_over:
+        if self.game_over or not self.turno_jugador:
             return False
         
         fila, col = destino
@@ -343,13 +365,15 @@ class BeeGameGUI:
         if celda in [None, 'RUSC']:
             if self.abeja.mover(self.board, self.pos_abeja, destino):
                 self.pos_abeja = destino
-                self.mensaje = f"Abeja movida a ({fila}, {col})"
+                self.mensaje = f"Movida a ({fila}, {col})"
                 
                 # Si llega al rusc, recuperar energía
                 if self.board.es_rusc(fila, col):
                     self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
-                    self.mensaje += " | Energia recuperada en el rusc"
+                    self.mensaje += " | Energia recuperada"
                 
+                # FINALIZAR TURNO DEL JUGADOR
+                self.finalizar_turno_jugador()
                 return True
             else:
                 self.mensaje = "No hay suficiente energia para mover"
@@ -359,7 +383,7 @@ class BeeGameGUI:
     
     def recoger_nectar(self):
         """Intenta recoger néctar de una flor adyacente"""
-        if self.game_over or not self.celda_seleccionada:
+        if self.game_over or not self.celda_seleccionada or not self.turno_jugador:
             return False
         
         fila, col = self.celda_seleccionada
@@ -373,6 +397,9 @@ class BeeGameGUI:
             if df <= 1 and dc <= 1:
                 if self.abeja.recoger_nectar_y_polinizar(self.board, (fila, col)):
                     self.mensaje = f"Nectar recolectado! ({self.abeja.nectar_cargado}/{self.abeja.capacidad_nectar})"
+                    
+                    # FINALIZAR TURNO DEL JUGADOR
+                    self.finalizar_turno_jugador()
                     return True
                 else:
                     self.mensaje = "No se puede recoger de esa flor"
@@ -384,52 +411,70 @@ class BeeGameGUI:
     
     def accion_descansar(self):
         """La abeja descansa para recuperar energía"""
-        if self.game_over:
+        if self.game_over or not self.turno_jugador:
             return False
         
         self.abeja.descansar()
         self.mensaje = f"Descansando... Energia: {self.abeja.energia}/{self.abeja.max_energia}"
+        
+        # FINALIZAR TURNO DEL JUGADOR
+        self.finalizar_turno_jugador()
         return True
     
     def accion_a_star(self):
-        """Mueve la abeja un paso hacia el rusc usando A*"""
-        if self.game_over:
+        """Mueve la abeja automáticamente hacia el rusc usando A*"""
+        if self.game_over or not self.turno_jugador:
             return False
         
         ruta = self.abeja.calcular_ruta_a_rusc(self.board, self.pos_abeja)
         
         if ruta and len(ruta) > 1:
-            siguiente = ruta[1]
-            if self.abeja.mover(self.board, self.pos_abeja, siguiente):
-                self.pos_abeja = siguiente
-                self.mensaje = f"A*: Moviendo hacia rusc ({len(ruta)-1} pasos restantes)"
-                
-                # Si llegó al rusc, recuperar energía
-                if self.board.es_rusc(siguiente[0], siguiente[1]):
-                    self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
-                    self.mensaje += " | Energia recuperada"
-                
-                return True
+            # Mover automáticamente por toda la ruta
+            for i in range(1, len(ruta)):
+                siguiente = ruta[i]
+                if self.abeja.mover(self.board, self.pos_abeja, siguiente):
+                    self.pos_abeja = siguiente
+                else:
+                    self.mensaje = "Se quedo sin energia en el camino"
+                    self.finalizar_turno_jugador()
+                    return False
+            
+            # Si llegó al rusc, recuperar energía
+            if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
+                self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
+                self.mensaje = f"A*: Llegada al rusc (recorridos {len(ruta)-1} pasos) | Energia recuperada"
             else:
-                self.mensaje = "No hay suficiente energia"
+                self.mensaje = f"A*: Movimiento completado ({len(ruta)-1} pasos)"
+            
+            # FINALIZAR TURNO DEL JUGADOR
+            self.finalizar_turno_jugador()
+            return True
         else:
             self.mensaje = "Ya estas en el rusc"
         return False
     
     def accion_descargar(self):
         """Descarga néctar en el rusc"""
-        if self.game_over:
+        if self.game_over or not self.turno_jugador:
             return False
         
         if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
             if self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja):
                 self.mensaje = f"Nectar descargado! Rusc: {self.board.nectar_en_rusc}/{self.game_manager.nectar_objetivo}"
+                
+                # FINALIZAR TURNO DEL JUGADOR
+                self.finalizar_turno_jugador()
                 return True
             else:
                 self.mensaje = "No tienes nectar para descargar"
         else:
             self.mensaje = "Debes estar en el rusc para descargar"
         return False
+    
+    def finalizar_turno_jugador(self):
+        """Finaliza el turno del jugador y ejecuta automáticamente el turno de la humanidad"""
+        self.turno_jugador = False
+        self.turno_humanidad()
     
     def turno_humanidad(self):
         """Ejecuta el turno de la humanidad"""
@@ -438,20 +483,40 @@ class BeeGameGUI:
         
         self.turno += 1
         
-        # Turno de la humanidad
+        # Contar obstáculos actuales
+        obstaculos_actuales = sum(1 for fila in self.board.grid for celda in fila if celda == 'OBSTACULO')
+        puede_obstaculo = (self.turno - self.ultimo_turno_obstaculo >= 3) and (obstaculos_actuales < 4)
+        
+        # Turno de la humanidad con restricciones
         acciones_humanidad = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
-        if acciones_humanidad:
-            accion_h = acciones_humanidad[0]
+        
+        # Filtrar acciones según restricciones
+        acciones_validas = []
+        for accion in acciones_humanidad:
+            tipo_h, pos_h = accion
+            
+            if tipo_h == 'obstaculo':
+                # Solo si puede colocar obstáculo
+                if puede_obstaculo:
+                    acciones_validas.append(accion)
+            else:  # pesticida
+                acciones_validas.append(accion)
+        
+        if acciones_validas:
+            accion_h = acciones_validas[0]
             tipo_h, pos_h = accion_h
             fila, col = pos_h
             
             if tipo_h == 'pesticida':
                 flor = self.board.get_celda(fila, col)
                 flor.aplicar_pesticida()
-                self.mensaje = f"TURNO {self.turno}: Humanidad aplico pesticida en ({fila}, {col})"
+                self.mensaje = f"TURNO {self.turno}: Humanidad aplico PESTICIDA en ({fila}, {col})"
             elif tipo_h == 'obstaculo':
                 self.board.grid[fila][col] = 'OBSTACULO'
-                self.mensaje = f"TURNO {self.turno}: Humanidad coloco obstaculo en ({fila}, {col})"
+                self.ultimo_turno_obstaculo = self.turno
+                self.mensaje = f"TURNO {self.turno}: Humanidad coloco OBSTACULO en ({fila}, {col})"
+        else:
+            self.mensaje = f"TURNO {self.turno}: Humanidad no pudo actuar"
         
         # Verificar eventos climáticos cada 4 turnos
         if self.turno % 4 == 0:
@@ -479,6 +544,10 @@ class BeeGameGUI:
             self.game_over = True
             self.resultado = resultado
             self.mensaje = mensaje_final
+        else:
+            # Devolver el turno al jugador
+            self.turno_jugador = True
+            self.mensaje += " | TU TURNO"
     
     def run(self):
         """Bucle principal del juego"""
@@ -493,38 +562,32 @@ class BeeGameGUI:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
-                    elif event.key == pygame.K_SPACE and not self.game_over:
-                        self.turno_humanidad()
                 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     
-                    # Click en tablero
+                    # Click en tablero (solo si es turno del jugador)
                     celda = self.obtener_celda_click(pos)
-                    if celda:
+                    if celda and self.turno_jugador:
                         self.celda_seleccionada = celda
                         # Intentar mover a la celda
                         self.mover_abeja(celda)
                     
-                    # Click en botón recoger
-                    if self.botones['recoger'].collidepoint(pos) and not self.game_over:
+                    # Click en botón recoger (solo si es turno del jugador)
+                    if self.botones['recoger'].collidepoint(pos) and self.turno_jugador and not self.game_over:
                         self.recoger_nectar()
                     
                     # Click en botón descansar
-                    elif self.botones['descansar'].collidepoint(pos) and not self.game_over:
+                    elif self.botones['descansar'].collidepoint(pos) and self.turno_jugador and not self.game_over:
                         self.accion_descansar()
                     
                     # Click en botón A*
-                    elif self.botones['a_star'].collidepoint(pos) and not self.game_over:
+                    elif self.botones['a_star'].collidepoint(pos) and self.turno_jugador and not self.game_over:
                         self.accion_a_star()
                     
                     # Click en botón descargar
-                    elif self.botones['descargar'].collidepoint(pos) and not self.game_over:
+                    elif self.botones['descargar'].collidepoint(pos) and self.turno_jugador and not self.game_over:
                         self.accion_descargar()
-                    
-                    # Click en botón siguiente (turno humanidad)
-                    elif self.botones['siguiente'].collidepoint(pos) and not self.game_over:
-                        self.turno_humanidad()
             
             # Dibujar
             self.screen.fill(BLANCO)
