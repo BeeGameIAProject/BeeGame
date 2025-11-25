@@ -10,6 +10,17 @@
 
 **BeeGame** es un juego de estrategia por turnos donde controlas una abeja que debe sobrevivir y recolectar néctar en un entorno hostil. El proyecto implementa algoritmos de **Inteligencia Artificial** avanzados como **Expectimax**, **A\*** y funciones heurísticas para crear una experiencia de juego desafiante.
 
+### 🌍 Objetivo Educativo
+
+Este proyecto busca **concienciar sobre la importancia de las abejas y el medio ambiente** a través de una experiencia interactiva. Al jugar, experimentas los desafíos reales que enfrentan las abejas en ecosistemas afectados por pesticidas y la actividad humana. El juego demuestra cómo:
+
+- 🐝 Las abejas son **esenciales para la polinización** y el equilibrio ecológico
+- 🧪 Los **pesticidas** representan una amenaza grave para su supervivencia
+- 🌸 La **desaparición de flores** afecta directamente la cadena alimentaria
+- 🚧 Los **obstáculos ambientales** dificultan su labor polinizadora
+
+A través de la mecánica del juego, se evidencia la lucha constante de estos insectos por sobrevivir mientras cumplen su función vital en la naturaleza.
+
 ---
 
 ## 🎮 Cómo Funciona
@@ -22,7 +33,7 @@
 - **❤️ Vida**: 100 puntos
 - **⚡ Energía**: 100 puntos (gasta 2 por movimiento)
 - **🍯 Néctar**: Capacidad de 50 unidades
-- **Objetivo**: Acumular 100 unidades de néctar en el rusc
+- **Objetivo**: Acumular unidades de néctar en el rusc
 
 ### La Humanidad (IA)
 - Intenta impedir que ganes usando:
@@ -30,7 +41,7 @@
   - 🚧 **Obstáculos**: Bloquean tu paso
 
 ### Eventos Aleatorios
-Cada 4 turnos ocurre un evento climático:
+Cada 4 (aproximadamente) turnos ocurre un evento climático:
 - ☔ **Lluvia (10%)**: Limpia pesticidas de las flores
 - ☀️ **Sol (15%)**: Aumenta reproducción de flores
 - 🌤️ **Normal (75%)**: Sin efectos
@@ -73,22 +84,16 @@ Al iniciar el juego, elige:
 
 | Acción | Cómo hacerlo |
 |--------|--------------|
-| **Mover** | Click en casilla adyacente (↑ ↓ ← →) |
-| **Polinizar** | Botón "🌸 Polinizar" (cuando estás sobre una flor) |
+| **Mover** | Click en casilla adyacente |
+| **Polinizar** | Botón "🌸 Polinizar" |
 | **Descansar** | Botón "😴 Descansar" (recupera 10 energía) |
 | **Volver al Rusc** | Botón "🏠 Volver al Rusc" (usa A* para ruta óptima) |
 
-### Flujo del Juego
-1. **Tu turno**: Mueves, polinizas o descansas
-2. **Turno de Humanidad**: La IA coloca pesticidas u obstáculos
-3. **Eventos**: Cada 4 turnos ocurre clima aleatorio
-4. Se repite hasta ganar o perder
 
 ### Ganar y Perder
 
 | Resultado | Condición |
 |-----------|-----------|
-| 🎉 **VICTORIA** | Acumulas 100 unidades de néctar en el rusc |
 | 💀 **DERROTA** | Tu vida llega a 0 |
 | 🥀 **DERROTA** | No quedan flores vivas en el tablero |
 
