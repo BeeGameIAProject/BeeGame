@@ -102,7 +102,6 @@ class BeeGameGUI:
         self.resultado = None
         self.celda_seleccionada = None
         self.turno_jugador = True
-        self.ultimo_turno_obstaculo = -3
         
         # Control de flores muertas { (f, c): turno_muerte }
         self.flores_muertas_timer = {}
@@ -844,11 +843,11 @@ class BeeGameGUI:
                         self.mensaje = f"🤖 IA: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
                         accion_realizada = True
                     elif tipo == 'obstaculo':
-                        self.board.grid[pos[0]][pos[1]] = 'OBSTACULO'
-                        self.board.obstaculos.append(pos)
-                        self.ultimo_turno_obstaculo = self.turno
-                        self.mensaje = f"🤖 IA: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
-                        accion_realizada = True
+                        # Usar el método de humanidad que maneja el límite de 4 obstáculos
+                        exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
+                        if exito:
+                            self.mensaje = f"🤖 IA: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
+                            accion_realizada = True
             
             # Guardar estadísticas
             self.tiempo_calculo_ia = time.time() - inicio
@@ -858,8 +857,6 @@ class BeeGameGUI:
         else:
             # ===== MODO SIMPLE: IA BÁSICA (Original) =====
             acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
-            obstaculos_cnt = sum(1 for r in self.board.grid for c in r if c == 'OBSTACULO')
-            puede_obs = (self.turno - self.ultimo_turno_obstaculo >= 3) and (obstaculos_cnt < 5)
 
             for tipo, pos in acciones:
                 if tipo == 'pesticida':
@@ -869,13 +866,13 @@ class BeeGameGUI:
                     self.mensaje = f"¡ALERTA! Pesticida en ({f},{c})"
                     accion_realizada = True
                     break
-                elif tipo == 'obstaculo' and puede_obs:
-                    self.board.grid[pos[0]][pos[1]] = 'OBSTACULO'
-                    self.board.obstaculos.append(pos)
-                    self.ultimo_turno_obstaculo = self.turno
-                    self.mensaje = f"¡CUIDADO! Obstáculo en ({pos[0]},{pos[1]})"
-                    accion_realizada = True
-                    break
+                elif tipo == 'obstaculo':
+                    # Usar el método de humanidad que maneja el límite de 4 obstáculos
+                    exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
+                    if exito:
+                        self.mensaje = f"¡CUIDADO! Obstáculo en ({pos[0]},{pos[1]})"
+                        accion_realizada = True
+                        break
         
         if not accion_realizada:
             self.mensaje = "La humanidad observa..."

@@ -10,7 +10,8 @@ class Humanidad():
         self.name = name
         self.player_name = player_name
         self.radio_pesticida = 2  # Radio de acción para pesticidas (cerca de la abeja)
-        self.radio_obstaculo = 2  # Radio de acción para obstáculos (cerca del rusc)
+        self.radio_obstaculo = 3  # Radio de acción para obstáculos (cerca del rusc, EXCLUYENDO rusc)
+        self.max_obstaculos = 4   # Máximo número de obstáculos permitidos en el tablero
     
     def to_string(self):
         return f"Agente: {self.player_name}, Icono: {self.name}"
@@ -39,13 +40,14 @@ class Humanidad():
                 if distancia <= self.radio_pesticida:
                     acciones.append(('pesticida', pos))
         
-        # Obtener acciones de obstáculo (radio 2 del rusc, en casillas vacías)
+        # Obtener acciones de obstáculo (radio 3 del rusc, en casillas vacías, EXCLUYENDO la casilla del rusc)
         rusc_pos = tablero.rusc_pos
         for i in range(tablero.filas):
             for j in range(tablero.columnas):
                 if tablero.get_celda(i, j) is None:  # Casilla vacía
                     distancia = self.distancia_manhattan((i, j), rusc_pos)
-                    if distancia <= self.radio_obstaculo:
+                    # Radio 3 pero EXCLUYENDO la casilla del rusc (distancia > 0)
+                    if 0 < distancia <= self.radio_obstaculo:
                         acciones.append(('obstaculo', (i, j)))
         
         return acciones
@@ -78,8 +80,8 @@ class Humanidad():
         return exito
     
     def colocar_obstaculo(self, tablero, posicion):
-        """
-        Coloca un obstáculo en una posición si cumple las restricciones.
+        """Coloca un obstáculo en una posición si cumple las restricciones.
+        Si ya hay 4 obstáculos, elimina el más antiguo.
         
         Args:
             tablero: El tablero del juego
@@ -90,10 +92,20 @@ class Humanidad():
         """
         fila, col = posicion
         
-        # Verificar restricción de radio respecto al rusc
-        distancia = self.distancia_manhattan(posicion, tablero.rusc_pos)
-        if distancia > self.radio_obstaculo:
+        # Verificar que NO es la casilla del rusc
+        if (fila, col) == tablero.rusc_pos:
             return False
+        
+        # Verificar restricción de radio respecto al rusc (1 a 3, excluyendo 0)
+        distancia = self.distancia_manhattan(posicion, tablero.rusc_pos)
+        if distancia == 0 or distancia > self.radio_obstaculo:
+            return False
+        
+        # Si ya hay 4 obstáculos, eliminar el más antiguo (FIFO)
+        if len(tablero.obstaculos) >= self.max_obstaculos:
+            obstaculo_antiguo = tablero.obstaculos[0]
+            tablero.grid[obstaculo_antiguo[0]][obstaculo_antiguo[1]] = None
+            tablero.obstaculos.pop(0)
         
         # Colocar obstáculo
         exito = tablero.colocar_obstaculo(fila, col)
