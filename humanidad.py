@@ -66,19 +66,15 @@ class Humanidad():
         
         # Verificar que hay una flor
         if not tablero.es_flor(fila, col):
-            print(f"No hay una flor en la posición {posicion}")
             return False
         
         # Verificar restricción de radio
         distancia = self.distancia_manhattan(posicion, pos_abeja)
         if distancia > self.radio_pesticida:
-            print(f"La posición {posicion} está fuera del radio permitido (distancia: {distancia}, máximo: {self.radio_pesticida})")
             return False
         
         # Aplicar pesticida
         exito = tablero.aplicar_pesticida_en(fila, col)
-        if exito:
-            print(f"Pesticida aplicado en {posicion}")
         return exito
     
     def colocar_obstaculo(self, tablero, posicion):
@@ -97,15 +93,10 @@ class Humanidad():
         # Verificar restricción de radio respecto al rusc
         distancia = self.distancia_manhattan(posicion, tablero.rusc_pos)
         if distancia > self.radio_obstaculo:
-            print(f"La posición {posicion} está fuera del radio permitido del rusc (distancia: {distancia}, máximo: {self.radio_obstaculo})")
             return False
         
         # Colocar obstáculo
         exito = tablero.colocar_obstaculo(fila, col)
-        if exito:
-            print(f"Obstáculo colocado en {posicion}")
-        else:
-            print(f"No se pudo colocar obstáculo en {posicion} (casilla ocupada)")
         return exito
     
     def ejecutar_accion(self, tablero, accion, pos_abeja):
@@ -127,7 +118,6 @@ class Humanidad():
         elif tipo_accion == 'obstaculo':
             return self.colocar_obstaculo(tablero, posicion)
         else:
-            print(f"Tipo de acción desconocido: {tipo_accion}")
             return False
     
     def printname(self):

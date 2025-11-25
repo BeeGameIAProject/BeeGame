@@ -10,7 +10,7 @@ from board import Board
 from bee import Bee
 from humanidad import Humanidad
 from chance_events import ChanceEvents
-from expectimax import ExpectimaxAI
+from expectimax import ExpectimaxAI, GameState
 from heuristica import Heuristica
 from game_manager import GameManager
 
@@ -106,6 +106,12 @@ class BeeGameGUI:
         
         # Control de flores muertas { (f, c): turno_muerte }
         self.flores_muertas_timer = {}
+        
+        # Control de IA Expectimax
+        self.usar_expectimax = True  # Toggle para activar/desactivar IA
+        self.calculando_ia = False
+        self.nodos_explorados = 0
+        self.tiempo_calculo_ia = 0
         
         # Animación A*
         self.moviendo_a_star = False
@@ -336,6 +342,10 @@ class BeeGameGUI:
         self.dibujar_widget_clima(x_pad, y)
         y += 80
         
+        # Widget de IA
+        self.dibujar_widget_ia(x_pad, y)
+        y += 90
+        
         # Caja de Mensajes (Log)
         self.dibujar_log(x_pad, y)
 
@@ -430,6 +440,40 @@ class BeeGameGUI:
         # Guardar rect para detección de click
         self.help_clima_rect = help_rect
 
+    def dibujar_widget_ia(self, x, y):
+        """Dibuja información del estado de la IA Expectimax"""
+        rect_ia = pygame.Rect(x, y, 350, 75)
+        pygame.draw.rect(self.screen, (255, 255, 255), rect_ia, border_radius=10)
+        pygame.draw.rect(self.screen, (220, 220, 230), rect_ia, 1, border_radius=10)
+        
+        # Título
+        titulo = self.font_bold.render("🤖 IA Expectimax", True, C_TEXTO_PRINCIPAL)
+        self.screen.blit(titulo, (x + 15, y + 10))
+        
+        # Toggle Estado
+        estado_txt = "ACTIVA" if self.usar_expectimax else "DESACTIVADA"
+        color_estado = (50, 200, 50) if self.usar_expectimax else (200, 50, 50)
+        estado_surf = self.font_small.render(f"Estado: {estado_txt}", True, color_estado)
+        self.screen.blit(estado_surf, (x + 15, y + 35))
+        
+        # Estadísticas (si está activa)
+        if self.usar_expectimax:
+            # Nodos explorados
+            nodos_txt = self.font_small.render(f"Nodos: {self.nodos_explorados}", True, C_TEXTO_SECUNDARIO)
+            self.screen.blit(nodos_txt, (x + 15, y + 53))
+            
+            # Tiempo de cálculo
+            tiempo_txt = self.font_small.render(f"Tiempo: {self.tiempo_calculo_ia*1000:.0f}ms", True, C_TEXTO_SECUNDARIO)
+            self.screen.blit(tiempo_txt, (x + 180, y + 53))
+        
+        # Indicador de procesamiento
+        if self.calculando_ia:
+            # Spinner animado
+            angulo = (pygame.time.get_ticks() // 100) % 8
+            spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
+            spinner = self.font_subtitle.render(spinner_chars[angulo], True, (100, 150, 255))
+            self.screen.blit(spinner, (x + 310, y + 8))
+    
     def dibujar_tooltip_clima(self, x, y):
         """Dibuja un tooltip explicando los estados del clima"""
         tooltip_width = 400
@@ -643,29 +687,32 @@ class BeeGameGUI:
                 celda = self.board.get_celda(fila, col)
                 daño = 0
                 if hasattr(celda, 'pesticidas') and celda.pesticidas > 0:
-                     # Lógica simplificada de daño si la celda es flor
                      daño = celda.get_daño_pesticida() if hasattr(celda, 'get_daño_pesticida') else 0
 
                 self.pos_abeja = destino
-                self.mensaje = f"Movimiento a ({fila}, {col})"
-                if daño > 0: self.mensaje += f" ¡Daño -{daño}!"
+                self.mensaje = f"🐝 Movimiento a ({fila}, {col})"
+                if daño > 0: self.mensaje += f" 💥 ¡Daño -{daño}!"
 
                 if self.board.es_rusc(fila, col):
-                    recuperado = self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
+                    nectar_descargado = self.abeja.nectar_cargado
+                    self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
                     self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
-                    self.mensaje = "¡En casa! Energía recuperada y miel descargada."
+                    if nectar_descargado > 0:
+                        self.mensaje = f"🏠 ¡En casa! Energía y vida recuperadas. Miel descargada: {nectar_descargado}"
+                    else:
+                        self.mensaje = "🏠 ¡En casa! Energía y vida recuperadas."
 
                 self.finalizar_turno_jugador()
                 return True
             else:
-                self.mensaje = "¡Sin energía suficiente!"
+                self.mensaje = "⚠️ ¡Sin energía suficiente para moverse!"
         else:
-            self.mensaje = "Camino bloqueado."
+            self.mensaje = "🪨 Camino bloqueado por obstáculo."
         return False
 
     def recoger_nectar(self):
         if self.game_over or not self.celda_seleccionada: 
-            self.mensaje = "Selecciona una flor primero."
+            self.mensaje = "👆 Selecciona una flor primero (click derecho)."
             return
         
         f, c = self.celda_seleccionada
@@ -673,19 +720,24 @@ class BeeGameGUI:
         if abs(self.pos_abeja[0]-f) <= 1 and abs(self.pos_abeja[1]-c) <= 1:
             if self.board.es_flor(f, c):
                 if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
-                    self.mensaje = "¡Néctar recogido y polinizado!"
+                    self.mensaje = f"🌼 ¡Néctar +10! Flor polinizada en ({f},{c})"
                     self.finalizar_turno_jugador()
                 else:
-                    self.mensaje = "No se puede recoger (vacía o llena)."
+                    if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
+                        self.mensaje = "⚠️ Sin energía para recoger néctar."
+                    elif not self.abeja.puede_cargar_nectar():
+                        self.mensaje = "🎒 Mochila llena. Ve al rusc a descargar."
+                    else:
+                        self.mensaje = "❌ Flor muerta o sin néctar."
             else:
-                self.mensaje = "Eso no es una flor."
+                self.mensaje = "❌ Eso no es una flor."
         else:
-            self.mensaje = "¡Demasiado lejos!"
+            self.mensaje = "📏 ¡Demasiado lejos! Muévete más cerca."
 
     def accion_descansar(self):
         if self.game_over: return
         self.abeja.descansar()
-        self.mensaje = "Zzz... Recuperando energía."
+        self.mensaje = "💤 Descansando... Energía +20"
         self.finalizar_turno_jugador()
 
     def accion_a_star(self):
@@ -696,17 +748,21 @@ class BeeGameGUI:
             self.ruta_a_star = ruta
             self.paso_a_star = 1
             self.timer_a_star = 0
-            self.mensaje = "Piloto automático activado (A*)..."
+            self.mensaje = f"🤖 Piloto automático A* activado ({len(ruta)-1} pasos)..."
         else:
-            self.mensaje = "Ya estás en casa o no hay ruta."
+            self.mensaje = "🏠 Ya estás en casa o no hay ruta disponible."
 
     def accion_descargar(self):
         if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
-            self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
-            self.mensaje = "Miel descargada manual."
-            self.finalizar_turno_jugador()
+            if self.abeja.nectar_cargado > 0:
+                cantidad = self.abeja.nectar_cargado
+                self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
+                self.mensaje = f"🍯 Miel descargada: +{cantidad}"
+                self.finalizar_turno_jugador()
+            else:
+                self.mensaje = "🎒 No tienes néctar para descargar."
         else:
-            self.mensaje = "Debes estar en el rusc."
+            self.mensaje = "🏠 Debes estar en el rusc para descargar."
 
     def actualizar_a_star(self):
         self.timer_a_star += 1
@@ -721,11 +777,14 @@ class BeeGameGUI:
                     self.moviendo_a_star = False # Sin energía
             else:
                 self.moviendo_a_star = False
-                self.mensaje = "Llegada a destino (A*)."
                 # Auto-descarga al llegar
                 if self.board.es_rusc(*self.pos_abeja):
+                    nectar_desc = self.abeja.nectar_cargado
                     self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
                     self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
+                    self.mensaje = f"✅ A* completado. Miel descargada: {nectar_desc}. Vida y energía restauradas."
+                else:
+                    self.mensaje = "✅ A* completado. Llegada a destino."
                 self.finalizar_turno_jugador()
 
     def finalizar_turno_jugador(self):
@@ -736,29 +795,87 @@ class BeeGameGUI:
         if self.game_over: return
         self.turno += 1
         
-        # IA Lógica
-        acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
-        # Filtro simple para demo (Prioriza atacar)
         accion_realizada = False
         
-        # Verificar si puede poner obstaculo (cada 3 turnos)
-        obstaculos_cnt = sum(1 for r in self.board.grid for c in r if c == 'OBSTACULO')
-        puede_obs = (self.turno - self.ultimo_turno_obstaculo >= 3) and (obstaculos_cnt < 5)
+        if self.usar_expectimax:
+            # ===== MODO EXPECTIMAX: IA INTELIGENTE =====
+            self.calculando_ia = True
+            import time
+            inicio = time.time()
+            
+            # Crear estado actual del juego
+            estado_actual = GameState(
+                tablero=self.board,
+                abeja=self.abeja,
+                pos_abeja=self.pos_abeja,
+                humanidad=self.humanidad_agente,
+                eventos_azar=self.eventos_azar,
+                turno=self.turno
+            )
+            
+            # Obtener acciones válidas
+            acciones_validas = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+            
+            if acciones_validas:
+                # Evaluar cada acción usando Expectimax (simplificado para MIN)
+                mejor_accion = None
+                peor_valor = float('inf')
+                
+                for accion in acciones_validas:
+                    # Simular acción
+                    estado_test = estado_actual.copy()
+                    estado_test.humanidad.ejecutar_accion(estado_test.tablero, accion, estado_test.pos_abeja)
+                    
+                    # Evaluar usando Expectimax (desde perspectiva CHANCE -> MAX)
+                    valor = self.ai.expectimax(estado_test, 0, 'CHANCE')
+                    
+                    # MIN busca minimizar el valor para MAX
+                    if valor < peor_valor:
+                        peor_valor = valor
+                        mejor_accion = accion
+                
+                # Ejecutar mejor acción encontrada
+                if mejor_accion:
+                    tipo, pos = mejor_accion
+                    if tipo == 'pesticida':
+                        f, c = pos
+                        flor = self.board.get_celda(f, c)
+                        flor.aplicar_pesticida()
+                        self.mensaje = f"🤖 IA: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
+                        accion_realizada = True
+                    elif tipo == 'obstaculo':
+                        self.board.grid[pos[0]][pos[1]] = 'OBSTACULO'
+                        self.board.obstaculos.append(pos)
+                        self.ultimo_turno_obstaculo = self.turno
+                        self.mensaje = f"🤖 IA: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
+                        accion_realizada = True
+            
+            # Guardar estadísticas
+            self.tiempo_calculo_ia = time.time() - inicio
+            self.nodos_explorados = self.ai.nodes_explored
+            self.calculando_ia = False
+            
+        else:
+            # ===== MODO SIMPLE: IA BÁSICA (Original) =====
+            acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+            obstaculos_cnt = sum(1 for r in self.board.grid for c in r if c == 'OBSTACULO')
+            puede_obs = (self.turno - self.ultimo_turno_obstaculo >= 3) and (obstaculos_cnt < 5)
 
-        for tipo, pos in acciones:
-            if tipo == 'pesticida':
-                f, c = pos
-                flor = self.board.get_celda(f, c)
-                flor.aplicar_pesticida()
-                self.mensaje = f"¡ALERTA! Pesticida en ({f},{c})"
-                accion_realizada = True
-                break
-            elif tipo == 'obstaculo' and puede_obs:
-                self.board.grid[pos[0]][pos[1]] = 'OBSTACULO'
-                self.ultimo_turno_obstaculo = self.turno
-                self.mensaje = f"¡CUIDADO! Obstáculo en ({pos[0]},{pos[1]})"
-                accion_realizada = True
-                break
+            for tipo, pos in acciones:
+                if tipo == 'pesticida':
+                    f, c = pos
+                    flor = self.board.get_celda(f, c)
+                    flor.aplicar_pesticida()
+                    self.mensaje = f"¡ALERTA! Pesticida en ({f},{c})"
+                    accion_realizada = True
+                    break
+                elif tipo == 'obstaculo' and puede_obs:
+                    self.board.grid[pos[0]][pos[1]] = 'OBSTACULO'
+                    self.board.obstaculos.append(pos)
+                    self.ultimo_turno_obstaculo = self.turno
+                    self.mensaje = f"¡CUIDADO! Obstáculo en ({pos[0]},{pos[1]})"
+                    accion_realizada = True
+                    break
         
         if not accion_realizada:
             self.mensaje = "La humanidad observa..."

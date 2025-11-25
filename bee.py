@@ -28,13 +28,11 @@ class Bee():
 
         # Comprobar límites
         if not (0 <= to[0] < filas and 0 <= to[1] < columnas):
-            print("Movimiento inválido: fuera del tablero.")
             return False
 
         if abs(start[0] - to[0]) <= 1 and abs(start[1] - to[1]) <= 1:
             return True
 
-        print("Movimiento inválido.")
         return False
     
     def aplicar_daño_por_flor(self, board, posicion):
@@ -96,20 +94,16 @@ class Bee():
     def mover(self, tablero, pos_actual, pos_destino):
         """Mueve la abeja a una nueva posición. Retorna True si fue exitoso."""
         if not self.tiene_energia(self.coste_movimiento):
-            print("No hay suficiente energía para moverse.")
             return False
         
         if not self.is_valid_move(tablero, pos_actual, pos_destino):
             return False
         
         if not tablero.es_transitable(pos_destino[0], pos_destino[1]):
-            print("La casilla destino no es transitable.")
             return False
         
         # Aplicar daño si pasa por una flor con pesticidas
         daño = self.aplicar_daño_por_flor(tablero, pos_destino)
-        if daño > 0:
-            print(f"¡Daño por pesticida! -{daño} vida")
         
         self.energia -= self.coste_movimiento
         return True
@@ -117,21 +111,17 @@ class Bee():
     def recoger_nectar_y_polinizar(self, tablero, posicion):
         """Recoge néctar de una flor y la poliniza. Retorna True si fue exitoso."""
         if not self.tiene_energia(self.coste_recoleccion):
-            print("No hay suficiente energía para recoger néctar.")
             return False
         
         if not self.puede_cargar_nectar():
-            print("La capacidad de néctar está llena.")
             return False
         
         fila, col = posicion
         if not tablero.es_flor(fila, col):
-            print("No hay una flor en esta posición.")
             return False
         
         flor = tablero.get_celda(fila, col)
         if not flor.esta_viva():
-            print("La flor está muerta.")
             return False
         
         # Polinizar la flor
@@ -142,7 +132,6 @@ class Bee():
         self.nectar_cargado += cantidad_recolectada
         self.energia -= self.coste_recoleccion
         
-        print(f"Néctar recolectado: {cantidad_recolectada}. Flor polinizada.")
         return True
     
     def descansar(self, cantidad=20):
@@ -150,22 +139,18 @@ class Bee():
         self.energia += cantidad
         if self.energia > self.max_energia:
             self.energia = self.max_energia
-        print(f"Descansando... Energía recuperada: +{cantidad}")
         return True
     
     def descargar_nectar_en_rusc(self, tablero, posicion):
         """Descarga el néctar en el rusc si la abeja está en esa posición."""
         fila, col = posicion
         if not tablero.es_rusc(fila, col):
-            print("No estás en el rusc.")
             return False
         
         if self.nectar_cargado == 0:
-            print("No tienes néctar para descargar.")
             return False
         
         tablero.agregar_nectar_al_rusc(self.nectar_cargado)
-        print(f"Néctar descargado en el rusc: {self.nectar_cargado}")
         self.nectar_cargado = 0
         return True
     
@@ -173,14 +158,12 @@ class Bee():
         """Recupera energía y vida completa si está en el rusc."""
         fila, col = posicion
         if not tablero.es_rusc(fila, col):
-            print("No estás en el rusc.")
             return False
         
         energia_recuperada = self.max_energia - self.energia
         vida_recuperada = self.max_vida - self.life
         self.energia = self.max_energia
         self.life = self.max_vida
-        print(f"En el rusc - Energía: +{energia_recuperada}, Vida: +{vida_recuperada}")
         return True
     
     def calcular_ruta_a_rusc(self, tablero, pos_actual):
