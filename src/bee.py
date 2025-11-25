@@ -1,4 +1,4 @@
-import board
+from . import board
 import heapq
 
 class Bee():
@@ -37,7 +37,7 @@ class Bee():
     
     def aplicar_daño_por_flor(self, board, posicion):
         """Aplica daño a la abeja si pasa por una flor con pesticidas."""
-        from flower import Flower
+        from .flower import Flower
         celda = board.get_celda(posicion[0], posicion[1])
         if isinstance(celda, Flower) and celda.esta_viva():
             daño = celda.get_daño_pesticida()

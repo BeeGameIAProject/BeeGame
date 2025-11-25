@@ -6,13 +6,14 @@ MVP7: Implementación con Pygame - Visuals Overhaul
 import pygame
 import sys
 import math
-from board import Board
-from bee import Bee
-from humanidad import Humanidad
-from chance_events import ChanceEvents
-from expectimax import ExpectimaxAI, GameState
-from heuristica import Heuristica
-from game_manager import GameManager
+from src.board import Board
+from src.bee import Bee
+from src.humanidad import Humanidad
+from src.chance_events import ChanceEvents
+from src.expectimax import ExpectimaxAI, GameState
+from src.heuristica import Heuristica
+from src.game_manager import GameManager
+from src.flower import Flower
 
 # --- PALETA DE COLORES MEJORADA (Tonos Pastel y Naturales) ---
 C_FONDO_PANEL = (245, 245, 247)

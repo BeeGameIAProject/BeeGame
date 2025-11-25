@@ -1,5 +1,5 @@
 import random
-from flower import Flower
+from .flower import Flower
 
 class Board():
     """

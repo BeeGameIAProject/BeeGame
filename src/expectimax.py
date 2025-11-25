@@ -1,9 +1,9 @@
 import copy
 import random
-from bee import Bee
-from humanidad import Humanidad
-from chance_events import ChanceEvents
-from heuristica import Heuristica
+from .bee import Bee
+from .humanidad import Humanidad
+from .chance_events import ChanceEvents
+from .heuristica import Heuristica
 
 class GameState():
     """

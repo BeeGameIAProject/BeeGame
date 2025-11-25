@@ -64,7 +64,7 @@ pip install pygame
 
 # 4. Ejecutar el juego
 cd BeeGame
-python gui_simple.py
+python main.py
 ```
 
 ---
@@ -117,15 +117,20 @@ Al iniciar el juego, elige:
 
 ```
 BeeGame/
-├── bee.py                 # Lógica de la abeja (movimiento, A*)
-├── board.py               # Tablero del juego
-├── chance_events.py       # Eventos climáticos aleatorios
-├── expectimax.py          # Algoritmo de IA principal
-├── flower.py              # Lógica de las flores
-├── gui_simple.py          # Interfaz gráfica (EJECUTAR ESTE)
-├── heuristica.py          # Evaluación de estados
-├── humanidad.py           # Lógica de la humanidad (IA enemiga)
-└── README.md              # Este archivo
+├── src/                       # Código fuente
+│   ├── bee.py                 # Lógica de la abeja (movimiento, A*)
+│   ├── board.py               # Tablero del juego
+│   ├── chance_events.py       # Eventos climáticos aleatorios
+│   ├── expectimax.py          # Algoritmo de IA principal
+│   ├── flower.py              # Lógica de las flores
+│   ├── game_manager.py        # Gestión de victoria/derrota
+│   ├── heuristica.py          # Evaluación de estados
+│   └── humanidad.py           # Lógica de la humanidad (IA enemiga)
+├── docs/                      # Documentación
+│   └── MPV.md                 # Checklist de objetivos completados
+├── main.py                    # ▶️ EJECUTAR ESTE ARCHIVO
+├── gui_simple.py              # Interfaz gráfica del juego
+└── README.md                  # Este archivo
 ```
 
 ---
@@ -147,7 +152,7 @@ Este proyecto demuestra:
 
 1. Asegúrate de tener Python 3.12+ instalado
 2. Instala Pygame: `pip install pygame`
-3. Ejecuta desde la carpeta BeeGame: `python gui_simple.py`
+3. Ejecuta desde la carpeta BeeGame: `python main.py`
 
 ---
 
