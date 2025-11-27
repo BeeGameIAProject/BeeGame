@@ -984,7 +984,6 @@ class BeeGameGUI:
 
             pygame.display.flip()
             self.clock.tick(60)
-
         pygame.quit()
         sys.exit()
 
