@@ -167,9 +167,13 @@ class Bee():
         self.life = self.max_vida
         return True
     
-    def calcular_ruta_a_rusc(self, tablero, pos_actual):
+    def calcular_ruta_a_rusc(self, tablero, pos_actual,select):
         """Calcula la ruta óptima al rusc usando el algoritmo A*."""
-        return self.a_star(tablero, pos_actual, tablero.rusc_pos)
+        if select is None:
+            return self.a_star(tablero, pos_actual, tablero.rusc_pos)
+        else:
+            return self.a_star(tablero, pos_actual, select)
+        
     
     def a_star(self, tablero, inicio, objetivo):
         """Implementa el algoritmo A* para encontrar la ruta óptima.

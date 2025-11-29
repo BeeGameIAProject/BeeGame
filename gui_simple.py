@@ -752,7 +752,10 @@ class BeeGameGUI:
 
     def accion_a_star(self):
         if self.game_over or self.moviendo_a_star: return
-        ruta = self.abeja.calcular_ruta_a_rusc(self.board, self.pos_abeja)
+        if self.celda_seleccionada:
+            ruta = self.abeja.calcular_ruta_a_rusc(self.board, self.pos_abeja,self.celda_seleccionada)
+        else:
+            ruta = self.abeja.calcular_ruta_a_rusc(self.board, self.pos_abeja,None)
         if ruta and len(ruta) > 1:
             self.moviendo_a_star = True
             self.ruta_a_star = ruta
