@@ -4,7 +4,7 @@
 - [x] **Implementación del Tablero**: Crear una matriz bidimensional de $N \times N$ casillas (dimensiones configurables, p.ej. $20 \times 20$ o $10 \times 10$).
     - [x] Probar tamaños del tablero 9*9 para que haya casilla central.
 - [x] **Elementos del Tablero**: Colocación inicial del rusc (colmena), flores y obstáculos.
-    - [ ] Arreglar emojis de los botones.
+    - [ ] Arreglar emojis de los botones(Mas dificil de lo q parece).
     - [ ] Replantear boton de descargar.
 - [x] **Lógica de las Flores**:
     - [x] Implementar estados: vida, nivel de polinización y contador de pesticidas.

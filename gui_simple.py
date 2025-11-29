@@ -2,7 +2,6 @@
 Interfaz Gráfica Mejorada (GUI) para el juego BeeGame
 MVP7: Implementación con Pygame - Visuals Overhaul
 """
-
 import pygame
 import sys
 import math
@@ -58,7 +57,7 @@ class BeeGameGUI:
         pygame.init()
         
         # Configuración de la ventana
-        self.CELL_SIZE = 70  # Celdas un poco más grandes para detalle
+        self.CELL_SIZE = 62  # Celdas un poco más grandes para detalle
         self.PANEL_WIDTH = 400
         self.BOARD_WIDTH = columnas * self.CELL_SIZE
         self.BOARD_HEIGHT = filas * self.CELL_SIZE
@@ -132,10 +131,11 @@ class BeeGameGUI:
         self.botones = self.crear_botones()
         
         self.clock = pygame.time.Clock()
-
+        
+        
     def crear_botones(self):
         x_start = self.BOARD_WIDTH + 25
-        y_start = self.WINDOW_HEIGHT - 220
+        y_start = self.WINDOW_HEIGHT - 140 
         w = 165
         h = 50
         gap = 20
@@ -144,7 +144,7 @@ class BeeGameGUI:
             'recoger': pygame.Rect(x_start, y_start, w, h),
             'descansar': pygame.Rect(x_start + w + gap, y_start, w, h),
             'a_star': pygame.Rect(x_start, y_start + h + gap, w, h),
-            'descargar': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
+            'IA': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
         }
 
     # --- FUNCIONES DE DIBUJO PROCEDIMENTAL ---
@@ -219,14 +219,29 @@ class BeeGameGUI:
         pygame.draw.circle(self.screen, (50, 30, 0), (cx, cy + 10), 8)
 
     def dibujar_obstaculo(self, cx, cy):
-        # Piedra estilizada
-        rect = pygame.Rect(cx - 25, cy - 20, 50, 40)
-        pygame.draw.rect(self.screen, C_OBSTACULO_BASE, rect, border_radius=10)
-        # Sombra/Relieve
-        pygame.draw.rect(self.screen, C_OBSTACULO_SOMBRA, (cx - 15, cy - 10, 30, 20), border_radius=5)
-        # Cruz roja pequeña
-        pygame.draw.line(self.screen, (200, 50, 50), (cx-10, cy-10), (cx+10, cy+10), 3)
-        pygame.draw.line(self.screen, (200, 50, 50), (cx+10, cy-10), (cx-10, cy+10), 3)
+        # Parámetros de la cerca de madera
+        num_postes = 3  # Número de postes de la cerca
+        ancho_poste = 15  # Ancho de cada poste
+        alto_poste = 62  # Alto de cada poste
+        espaciado_postes = 4  # Espacio entre los postes
+        color_madera = (139, 69, 19)  # Color de la madera (marrón)
+        color_barras = (160, 82, 45)  # Color de las barras de la cerca (madera más clara)
+
+        # Calcular el ancho total de la cerca (para centrarla)
+        ancho_cerca = (ancho_poste * num_postes) + (espaciado_postes * (num_postes - 1))
+        
+        # Dibujar los postes de la cerca
+        for i in range(num_postes):
+            # Posición horizontal de cada poste, con el cálculo centrado en cx
+            x_pos = cx - ancho_cerca // 2 + i * (ancho_poste + espaciado_postes) +7
+            pygame.draw.rect(self.screen, color_madera, pygame.Rect(x_pos - ancho_poste // 2, cy - alto_poste // 2, ancho_poste, alto_poste))
+
+        # Dibujar las barras horizontales (las que unen los postes)
+        barra_y_pos = cy - alto_poste // 4  # Posición vertical de la barra superior
+        pygame.draw.rect(self.screen, color_barras, pygame.Rect(cx - ancho_cerca // 2 -5, barra_y_pos, ancho_cerca+10, 10))
+
+        barra_y_pos = cy + alto_poste // 4  # Posición vertical de la barra inferior
+        pygame.draw.rect(self.screen, color_barras, pygame.Rect(cx - ancho_cerca // 2 -5, barra_y_pos, ancho_cerca+10, 10))
 
     def dibujar_flor(self, cx, cy, flor, pos_grid):
         # Gestión de desaparición de flores muertas
@@ -630,17 +645,17 @@ class BeeGameGUI:
             
             # Texto e Icono (simulado con texto)
             label = key.replace("_", " ").upper()
-            if key == "recoger": icon = "🌼"
-            elif key == "descansar": icon = "💤"
-            elif key == "a_star": icon = "🏠"
-            elif key == "descargar": icon = "📥"
+            #if key == "recoger": icon = "🌼"
+            #elif key == "descansar": icon = "💤"
+            #elif key == "a_star": icon = "🏠"
+            #elif key == "descargar": icon = "📥"
             
             # Render texto
-            try:
+            #try:
                 # Intentar renderizar emoji si la fuente lo soporta, si no, solo texto
-                txt_s = self.font_bold.render(f"{icon} {label}", True, txt_c)
-            except:
-                txt_s = self.font_bold.render(f"{label}", True, txt_c)
+                #txt_s = self.font_bold.render(f"{icon} {label}", True, txt_c)
+            #except:
+            txt_s = self.font_bold.render(f"{label}", True, txt_c)
                 
             cx = rect.x + rect.width // 2 - txt_s.get_width() // 2
             cy = rect.y + rect.height // 2 - txt_s.get_height() // 2
@@ -1001,5 +1016,5 @@ class BeeGameGUI:
         sys.exit()
 
 if __name__ == "__main__":
-    juego = BeeGameGUI(filas=8, columnas=8, nectar_objetivo=50)
+    juego = BeeGameGUI(filas=9, columnas=9, nectar_objetivo=50)
     juego.run()
