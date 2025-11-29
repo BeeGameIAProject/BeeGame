@@ -21,7 +21,7 @@
 - [x] **Atributos**: Implementar vida, energía y capacidad de almacenamiento de néctar.
 - [x] **Acciones Básicas**:
     - [x] Moverse por el tablero (coste de energía).
-        - [ ] Ajustar que no se pueda mover en la misma casilla (que no pierda energia al hacerlo).
+        - [x] Ajustar que no se pueda mover en la misma casilla (que no pierda energia al hacerlo).
     - [x] Recoger néctar y polinizar flores.
     - [x] Descansar (recuperar energía).
 - [x] **Acción Especial (Algoritmo A*)**:

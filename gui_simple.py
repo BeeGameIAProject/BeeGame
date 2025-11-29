@@ -54,16 +54,17 @@ C_BOTON_HOVER = (230, 230, 230)
 C_BOTON_BORDE = (200, 200, 200)
 
 class BeeGameGUI:
-    def __init__(self, filas=8, columnas=8, nectar_objetivo=50):
+    def __init__(self, filas=9, columnas=9, nectar_objetivo=50):
         pygame.init()
         
         # Configuración de la ventana
-        self.CELL_SIZE = 75  # Celdas un poco más grandes para detalle
+        self.CELL_SIZE = 70  # Celdas un poco más grandes para detalle
         self.PANEL_WIDTH = 400
         self.BOARD_WIDTH = columnas * self.CELL_SIZE
         self.BOARD_HEIGHT = filas * self.CELL_SIZE
         self.WINDOW_WIDTH = self.BOARD_WIDTH + self.PANEL_WIDTH
-        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 50, 800) # +50 para texto abajo
+        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 100, 600)
+        # -----------------------------------------------------------------
         
         # Activar anti-aliasing y transparencia
         self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
