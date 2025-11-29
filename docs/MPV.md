@@ -2,7 +2,7 @@
 
 ## 1. Entorn de Simulació (Tablero y Lógica)
 - [x] **Implementación del Tablero**: Crear una matriz bidimensional de $N \times N$ casillas (dimensiones configurables, p.ej. $20 \times 20$ o $10 \times 10$).
-    - [ ] Probar tamaños del tablero 9*9 para que haya casilla central.
+    - [x] Probar tamaños del tablero 9*9 para que haya casilla central.
 - [x] **Elementos del Tablero**: Colocación inicial del rusc (colmena), flores y obstáculos.
     - [ ] Arreglar emojis de los botones.
     - [ ] Replantear boton de descargar.
