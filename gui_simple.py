@@ -381,15 +381,16 @@ class BeeGameGUI:
         self.crear_barra_progreso(x, y, "Energía", self.abeja.energia, self.abeja.max_energia, C_ENERGIA)
         y += 45
         
-        # Néctar Rusc (Objetivo)
-        obj = self.game_manager.nectar_objetivo
-        act = self.board.nectar_en_rusc
-        self.crear_barra_progreso(x, y, f"Miel en Rusc ({act}/{obj})", act, obj, C_RUSC_BASE)
-        y += 45
-        
         # Néctar Mochila
-        txt = self.font_normal.render(f"Mochila: {self.abeja.nectar_cargado} / {self.abeja.capacidad_nectar}", True, C_TEXTO_PRINCIPAL)
+        self.crear_barra_progreso(x, y, f"Mochila:({self.abeja.nectar_cargado} / {self.abeja.capacidad_nectar})", self.abeja.nectar_cargado, self.abeja.capacidad_nectar, C_NECTAR)
+        
+        y += 45
+        # Néctar Rusc (Objetivo)
+        act = self.board.nectar_en_rusc
+        txt = self.font_normal.render(f"Miel en Rusc: {act} ", True, C_TEXTO_PRINCIPAL)
         self.screen.blit(txt, (x, y))
+        
+        
 
     def crear_barra_progreso(self, x, y, etiqueta, valor, maximo, color):
         # Texto
