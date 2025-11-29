@@ -10,7 +10,7 @@
     - [x] Implementar estados: vida, nivel de polinización y contador de pesticidas.
     - [x] Implementar muerte de la flor si acumula 3 unidades de pesticida.
     - [ ] Gestionar la evolución dinámica (reproducción o muerte).
-    - [ ] Poner daño de pesticida al recoger el nectar de flores con pesticida, no solo al pasar por ellas.
+    - [x] Poner daño de pesticida al recoger el nectar de flores con pesticida, no solo al pasar por ellas.
 - [x] **Lógica del Rusc**: Definir como punto de retorno para descargar néctar y recuperar energía.
     - [ ] Eliminar limite de nectar del Rusc.
 - [x] **Gestión de Turnos**: Implementar sistema secuencial para agentes y eventos de azar.

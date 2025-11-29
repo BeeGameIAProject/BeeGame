@@ -721,6 +721,15 @@ class BeeGameGUI:
             if self.board.es_flor(f, c):
                 if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
                     self.mensaje = f"🌼 ¡Néctar +10! Flor polinizada en ({f},{c})"
+                    # Chequeo pesticida
+                    celda = self.board.get_celda(f, c)
+                    daño = 0
+                    if hasattr(celda, 'pesticidas') and celda.pesticidas > 0:
+                        daño = celda.get_daño_pesticida() if hasattr(celda, 'get_daño_pesticida') else 0
+                        # Aplicar daño si pasa por una flor con pesticidas
+                        daño = self.abeja.aplicar_daño_por_flor(self.board, (f, c))
+
+                    if daño > 0: self.mensaje += f" 💥 ¡Daño -{daño}!"
                     self.finalizar_turno_jugador()
                 else:
                     if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):

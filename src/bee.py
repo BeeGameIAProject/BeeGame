@@ -132,6 +132,7 @@ class Bee():
         self.nectar_cargado += cantidad_recolectada
         self.energia -= self.coste_recoleccion
         
+        
         return True
     
     def descansar(self, cantidad=20):
