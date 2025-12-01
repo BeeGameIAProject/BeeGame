@@ -118,7 +118,7 @@ class BeeGameGUI:
         self.flores_muertas_timer = {}
         
         # Control de IA Expectimax
-        self.usar_expectimax = False  # Toggle para activar/desactivar IA
+        self.usar_expectimax = True  # Toggle para activar/desactivar IA
         self.usar_qlearning = not (self.usar_expectimax)
         self.q_agent = QLearningAgent(alpha=0.5, gamma=0.9, epsilon=0.3)
         self.ultim_estat_q = None
@@ -798,17 +798,14 @@ class BeeGameGUI:
         else:
             self.mensaje = "🏠 Ya estás en casa o no hay ruta disponible."
 
-    def accion_descargar(self):
-        if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
-            if self.abeja.nectar_cargado > 0:
-                cantidad = self.abeja.nectar_cargado
-                self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
-                self.mensaje = f"🍯 Miel descargada: +{cantidad}"
-                self.finalizar_turno_jugador()
-            else:
-                self.mensaje = "🎒 No tienes néctar para descargar."
-        else:
-            self.mensaje = "🏠 Debes estar en el rusc para descargar."
+    def accion_ia(self):
+        self.usar_expectimax = not self.usar_expectimax
+        self.usar_qlearning = not self.usar_expectimax  # Alterna el otro algoritmo
+        
+        # Actualizar mensaje y consola
+        estado_txt = "ACTIVA" if self.usar_expectimax else "DESACTIVADA (Q-Learning ACTIVO)"
+        self.mensaje = f"🤖 IA Expectimax {estado_txt}."
+        print(f"[INFO] IA Expectimax {estado_txt}.")
 
     def actualizar_a_star(self):
         self.timer_a_star += 1
@@ -1051,7 +1048,7 @@ class BeeGameGUI:
                                     if key == 'recoger': self.recoger_nectar()
                                     elif key == 'descansar': self.accion_descansar()
                                     elif key == 'a_star': self.accion_a_star()
-                                    elif key == 'descargar': self.accion_descargar()
+                                    elif key == 'IA': self.accion_ia()
                                     clicked_btn = True
                                     break
                         
