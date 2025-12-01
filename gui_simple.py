@@ -5,6 +5,8 @@ MVP7: Implementación con Pygame - Visuals Overhaul
 import pygame
 import sys
 import math
+import random
+from src.qlearning import QLearningAgent
 from src.board import Board
 from src.bee import Bee
 from src.humanidad import Humanidad
@@ -51,6 +53,14 @@ C_NECTAR = (241, 196, 15)
 C_BOTON_ACTIVO = (255, 255, 255)
 C_BOTON_HOVER = (230, 230, 230)
 C_BOTON_BORDE = (200, 200, 200)
+
+#QL
+MAX_EPISODES_SAFETY = 1500
+MIN_EPISODES_WARMUP = 150
+CONVERGENCE_THRESHOLD = 0.0001
+epsilon = 0.1 
+gamma = 0.9    
+alpha = 0.1 
 
 class BeeGameGUI:
     def __init__(self, filas=9, columnas=9, nectar_objetivo=50):
@@ -108,10 +118,17 @@ class BeeGameGUI:
         self.flores_muertas_timer = {}
         
         # Control de IA Expectimax
-        self.usar_expectimax = True  # Toggle para activar/desactivar IA
+        self.usar_expectimax = False  # Toggle para activar/desactivar IA
+        self.usar_qlearning = not (self.usar_expectimax)
+        self.q_agent = QLearningAgent(alpha=0.5, gamma=0.9, epsilon=0.3)
+        self.ultim_estat_q = None
+        self.ultima_accio_q = None
         self.calculando_ia = False
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
+
+        # Control de IA QL
+        self.q_table = {}
         
         # Animación A*
         self.moviendo_a_star = False
@@ -823,13 +840,13 @@ class BeeGameGUI:
     def turno_humanidad(self):
         if self.game_over: return
         self.turno += 1
-        
+        acciones_validas = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
         accion_realizada = False
-        
+        import time
         if self.usar_expectimax:
-            # ===== MODO EXPECTIMAX: IA INTELIGENTE =====
+            # ===== MODO EXPECTIMAX: IA INTELIGENTE ===== 
             self.calculando_ia = True
-            import time
+            
             inicio = time.time()
             
             # Crear estado actual del juego
@@ -883,7 +900,52 @@ class BeeGameGUI:
             self.tiempo_calculo_ia = time.time() - inicio
             self.nodos_explorados = self.ai.nodes_explored
             self.calculando_ia = False
+        elif self.usar_qlearning:
+            # ===== MODO Q Learning =====
+            # 1. Observar estat actual S
+            estat_actual = self.q_agent.obtenir_estat_abstracte(self.board, self.pos_abeja)
             
+            # 2. Triar acció A
+            accio = self.q_agent.triar_accio(estat_actual, acciones_validas)
+            
+            if accio:
+                tipo, pos = accio
+                
+                # 3. Executar acció i calcular Recompensa immediata (Reward)
+                recompensa = 0
+                if tipo == 'pesticida':
+                    f, c = pos
+                    flor = self.board.get_celda(f, c)
+                    flor.aplicar_pesticida()
+                    self.mensaje = f"🤖 Q-Learning: Pesticida en ({f},{c})"
+                    
+                    # RECOMPENSA: Més alta si està a prop de l'abella
+                    dist = abs(f - self.pos_abeja[0]) + abs(c - self.pos_abeja[1])
+                    if dist <= 1: recompensa = 10  # Molt bé, li has donat
+                    elif dist <= 2: recompensa = 5
+                    else: recompensa = -1 # Malgastat lluny
+                    
+                    accion_realizada = True
+                    
+                elif tipo == 'obstaculo':
+                    exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
+                    if exito:
+                        self.mensaje = f"🤖 Q-Learning: Obstacle en ({pos[0]},{pos[1]})"
+                        # RECOMPENSA: Bloquejar camí
+                        recompensa = 2
+                        accion_realizada = True
+                    else:
+                        recompensa = -5 # Acció il·legal
+            
+                # 4. Observar nou estat S' i Actualitzar Q-Table
+                nou_estat = self.q_agent.obtenir_estat_abstracte(self.board, self.pos_abeja)
+                # Obtenim les accions futures (aproximades, suposem que són similars)
+                noves_accions = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+                
+                self.q_agent.update(estat_actual, accio, recompensa, nou_estat, noves_accions)
+                
+                # Debug (Opcional)
+                # print(f"Q-Update: {estat_actual} -> {tipo} -> R:{recompensa}")
         else:
             # ===== MODO SIMPLE: IA BÁSICA (Original) =====
             acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
@@ -932,7 +994,23 @@ class BeeGameGUI:
             self.mensaje = msg
         else:
             self.turno_jugador = True
-
+    def choose_action(self,state):
+        accions = []
+        if random.random() < epsilon:
+            return random.choice(accions) 
+        else:
+            return max(self.q_table[state], key=self.q_table[state].get) 
+    def step(self, state, action):
+        return None
+    def update_q_table(self, state, action, reward, next_state):
+        old_val = self.q_table[state][action]
+        future_max = max(self.q_table[next_state].values())
+        
+        target = reward + gamma * future_max
+        new_val = old_val + alpha * (target - old_val)
+        
+        self.q_table[state][action] = new_val
+        return abs(new_val - old_val)
     def actualizar_evento_climatico(self):
         if self.mostrar_evento_clima:
             self.timer_evento_clima += 1
