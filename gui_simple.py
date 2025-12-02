@@ -899,6 +899,9 @@ class BeeGameGUI:
             self.calculando_ia = False
         elif self.usar_qlearning:
             # ===== MODO Q Learning =====
+            self.calculando_ia = True
+            
+            inicio = time.time()
             # 1. Observar estat actual S
             estat_actual = self.q_agent.obtenir_estat_abstracte(self.board, self.pos_abeja)
             
@@ -943,6 +946,10 @@ class BeeGameGUI:
                 
                 # Debug (Opcional)
                 # print(f"Q-Update: {estat_actual} -> {tipo} -> R:{recompensa}")
+            # Guardar estadísticas
+            self.tiempo_calculo_ia = time.time() - inicio
+            self.nodos_explorados = self.ai.nodes_explored
+            self.calculando_ia = False
         else:
             # ===== MODO SIMPLE: IA BÁSICA (Original) =====
             acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
@@ -1045,10 +1052,12 @@ class BeeGameGUI:
                         if self.turno_jugador and not self.game_over:
                             for key, rect in self.botones.items():
                                 if rect.collidepoint(pos):
+                                    
                                     if key == 'recoger': self.recoger_nectar()
                                     elif key == 'descansar': self.accion_descansar()
                                     elif key == 'a_star': self.accion_a_star()
                                     elif key == 'IA': self.accion_ia()
+                                    if key != 'recoger':self.celda_seleccionada = None
                                     clicked_btn = True
                                     break
                         

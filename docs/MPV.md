@@ -5,6 +5,7 @@
     - [x] Probar tamaños del tablero 9*9 para que haya casilla central.
 - [x] **Elementos del Tablero**: Colocación inicial del rusc (colmena), flores y obstáculos.
     - [ ] Arreglar emojis de los botones(Mas dificil de lo q parece).
+    - [ ] Arreglar como se ve en el cambio de IA
     - [x] Replantear boton de descargar.
 - [x] **Lógica de las Flores**:
     - [x] Implementar estados: vida, nivel de polinización y contador de pesticidas.
@@ -58,7 +59,8 @@
     - [x] Gestionar nodos CHANCE (Clima/Reproducción): Calcular media ponderada por probabilidad.
 - [x] **Limitación de Profundidad**: Establecer profundidad máxima de búsqueda para viabilidad computacional.
 - [ ] **Aprendizaje por Refuerzo (Experimental)**:
-    - [ ] **Considerar Q-Learning**: Investigar implementación para aprendizaje de interacción con objetos (valores Q para estados de flores/obstáculos).
+    - [x] **Considerar Q-Learning**: Investigar implementación para aprendizaje de interacción con objetos (valores Q para estados de flores/obstáculos).
+    - [ ]**Mejorar Q-Learning** (Mejor despues de hacer la P3)
 
 ## 5. Heurística y Evaluación
 - [x] **Función Heurística $H(s)$**: Implementar fórmula de evaluación de estado para nodos hoja/límite.
