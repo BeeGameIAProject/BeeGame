@@ -1,6 +1,7 @@
 """
 BeeGame - Simulación Ecológica con IA
 Punto de entrada principal del juego
+
 """
 
 from gui_simple import BeeGameGUI

@@ -107,8 +107,8 @@ class Bee():
         
         # Aplicar daño si pasa por una flor con pesticidas
         daño = self.aplicar_daño_por_flor(tablero, pos_destino)
-        
-        self.energia -= self.coste_movimiento
+        if pos_actual[0] != pos_destino[0] or pos_actual[1] != pos_destino[1]:
+            self.energia -= self.coste_movimiento
         return True
     
     def recoger_nectar_y_polinizar(self, tablero, posicion):
@@ -134,6 +134,7 @@ class Bee():
         cantidad_recolectada = min(self.nectar_por_flor, self.capacidad_nectar - self.nectar_cargado)
         self.nectar_cargado += cantidad_recolectada
         self.energia -= self.coste_recoleccion
+        
         
         return True
     

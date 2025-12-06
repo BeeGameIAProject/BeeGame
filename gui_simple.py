@@ -2,10 +2,11 @@
 Interfaz Gráfica Mejorada (GUI) para el juego BeeGame
 MVP7: Implementación con Pygame - Visuals Overhaul
 """
-
 import pygame
 import sys
 import math
+import random
+from src.qlearning import QLearningAgent
 from src.board import Board
 from src.bee import Bee
 from src.humanidad import Humanidad
@@ -53,17 +54,26 @@ C_BOTON_ACTIVO = (255, 255, 255)
 C_BOTON_HOVER = (230, 230, 230)
 C_BOTON_BORDE = (200, 200, 200)
 
+#QL
+MAX_EPISODES_SAFETY = 1500
+MIN_EPISODES_WARMUP = 150
+CONVERGENCE_THRESHOLD = 0.0001
+epsilon = 0.1 
+gamma = 0.9    
+alpha = 0.1 
+
 class BeeGameGUI:
-    def __init__(self, filas=8, columnas=8, nectar_objetivo=50):
+    def __init__(self, filas=9, columnas=9, nectar_objetivo=50):
         pygame.init()
         
         # Configuración de la ventana
-        self.CELL_SIZE = 75  # Celdas un poco más grandes para detalle
+        self.CELL_SIZE = 62  # Celdas un poco más grandes para detalle
         self.PANEL_WIDTH = 400
         self.BOARD_WIDTH = columnas * self.CELL_SIZE
         self.BOARD_HEIGHT = filas * self.CELL_SIZE
         self.WINDOW_WIDTH = self.BOARD_WIDTH + self.PANEL_WIDTH
-        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 50, 800) # +50 para texto abajo
+        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 100, 600)
+        # -----------------------------------------------------------------
         
         # Activar anti-aliasing y transparencia
         self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
@@ -109,9 +119,16 @@ class BeeGameGUI:
         
         # Control de IA Expectimax
         self.usar_expectimax = True  # Toggle para activar/desactivar IA
+        self.usar_qlearning = not (self.usar_expectimax)
+        self.q_agent = QLearningAgent(alpha=0.5, gamma=0.9, epsilon=0.3)
+        self.ultim_estat_q = None
+        self.ultima_accio_q = None
         self.calculando_ia = False
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
+
+        # Control de IA QL
+        self.q_table = {}
         
         # Animación A* random
         self.moviendo_a_star = False
@@ -132,10 +149,11 @@ class BeeGameGUI:
         self.botones = self.crear_botones()
         
         self.clock = pygame.time.Clock()
-
+        
+        
     def crear_botones(self):
         x_start = self.BOARD_WIDTH + 25
-        y_start = self.WINDOW_HEIGHT - 220
+        y_start = self.WINDOW_HEIGHT - 140 
         w = 165
         h = 50
         gap = 20
@@ -144,7 +162,7 @@ class BeeGameGUI:
             'recoger': pygame.Rect(x_start, y_start, w, h),
             'descansar': pygame.Rect(x_start + w + gap, y_start, w, h),
             'a_star': pygame.Rect(x_start, y_start + h + gap, w, h),
-            'descargar': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
+            'IA': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
         }
 
     # --- FUNCIONES DE DIBUJO PROCEDIMENTAL ---
@@ -219,14 +237,29 @@ class BeeGameGUI:
         pygame.draw.circle(self.screen, (50, 30, 0), (cx, cy + 10), 8)
 
     def dibujar_obstaculo(self, cx, cy):
-        # Piedra estilizada
-        rect = pygame.Rect(cx - 25, cy - 20, 50, 40)
-        pygame.draw.rect(self.screen, C_OBSTACULO_BASE, rect, border_radius=10)
-        # Sombra/Relieve
-        pygame.draw.rect(self.screen, C_OBSTACULO_SOMBRA, (cx - 15, cy - 10, 30, 20), border_radius=5)
-        # Cruz roja pequeña
-        pygame.draw.line(self.screen, (200, 50, 50), (cx-10, cy-10), (cx+10, cy+10), 3)
-        pygame.draw.line(self.screen, (200, 50, 50), (cx+10, cy-10), (cx-10, cy+10), 3)
+        # Parámetros de la cerca de madera
+        num_postes = 3  # Número de postes de la cerca
+        ancho_poste = 15  # Ancho de cada poste
+        alto_poste = 62  # Alto de cada poste
+        espaciado_postes = 4  # Espacio entre los postes
+        color_madera = (139, 69, 19)  # Color de la madera (marrón)
+        color_barras = (160, 82, 45)  # Color de las barras de la cerca (madera más clara)
+
+        # Calcular el ancho total de la cerca (para centrarla)
+        ancho_cerca = (ancho_poste * num_postes) + (espaciado_postes * (num_postes - 1))
+        
+        # Dibujar los postes de la cerca
+        for i in range(num_postes):
+            # Posición horizontal de cada poste, con el cálculo centrado en cx
+            x_pos = cx - ancho_cerca // 2 + i * (ancho_poste + espaciado_postes) +7
+            pygame.draw.rect(self.screen, color_madera, pygame.Rect(x_pos - ancho_poste // 2, cy - alto_poste // 2, ancho_poste, alto_poste))
+
+        # Dibujar las barras horizontales (las que unen los postes)
+        barra_y_pos = cy - alto_poste // 4  # Posición vertical de la barra superior
+        pygame.draw.rect(self.screen, color_barras, pygame.Rect(cx - ancho_cerca // 2 -5, barra_y_pos, ancho_cerca+10, 10))
+
+        barra_y_pos = cy + alto_poste // 4  # Posición vertical de la barra inferior
+        pygame.draw.rect(self.screen, color_barras, pygame.Rect(cx - ancho_cerca // 2 -5, barra_y_pos, ancho_cerca+10, 10))
 
     def dibujar_flor(self, cx, cy, flor, pos_grid):
         # Gestión de desaparición de flores muertas
@@ -366,15 +399,16 @@ class BeeGameGUI:
         self.crear_barra_progreso(x, y, "Energía", self.abeja.energia, self.abeja.max_energia, C_ENERGIA)
         y += 45
         
-        # Néctar Rusc (Objetivo)
-        obj = self.game_manager.nectar_objetivo
-        act = self.board.nectar_en_rusc
-        self.crear_barra_progreso(x, y, f"Miel en Rusc ({act}/{obj})", act, obj, C_RUSC_BASE)
-        y += 45
-        
         # Néctar Mochila
-        txt = self.font_normal.render(f"Mochila: {self.abeja.nectar_cargado} / {self.abeja.capacidad_nectar}", True, C_TEXTO_PRINCIPAL)
+        self.crear_barra_progreso(x, y, f"Mochila:({self.abeja.nectar_cargado} / {self.abeja.capacidad_nectar})", self.abeja.nectar_cargado, self.abeja.capacidad_nectar, C_NECTAR)
+        
+        y += 45
+        # Néctar Rusc (Objetivo)
+        act = self.board.nectar_en_rusc
+        txt = self.font_normal.render(f"Miel en Rusc: {act} ", True, C_TEXTO_PRINCIPAL)
         self.screen.blit(txt, (x, y))
+        
+        
 
     def crear_barra_progreso(self, x, y, etiqueta, valor, maximo, color):
         # Texto
@@ -632,15 +666,15 @@ class BeeGameGUI:
             label = key.replace("_", " ").upper()
             if key == "recoger": icon = "🌼"
             elif key == "descansar": icon = "💤"
-            elif key == "a_star_random": icon = "🏠"
+            elif key == "a_star": icon = "🏠"
             elif key == "descargar": icon = "📥"
             
             # Render texto
-            try:
+            #try:
                 # Intentar renderizar emoji si la fuente lo soporta, si no, solo texto
-                txt_s = self.font_bold.render(f"{icon} {label}", True, txt_c)
-            except:
-                txt_s = self.font_bold.render(f"{label}", True, txt_c)
+                #txt_s = self.font_bold.render(f"{icon} {label}", True, txt_c)
+            #except:
+            txt_s = self.font_bold.render(f"{label}", True, txt_c)
                 
             cx = rect.x + rect.width // 2 - txt_s.get_width() // 2
             cy = rect.y + rect.height // 2 - txt_s.get_height() // 2
@@ -727,6 +761,15 @@ class BeeGameGUI:
             if self.board.es_flor(f, c):
                 if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
                     self.mensaje = f"🌼 ¡Néctar +10! Flor polinizada en ({f},{c})"
+                    # Chequeo pesticida
+                    celda = self.board.get_celda(f, c)
+                    daño = 0
+                    if hasattr(celda, 'pesticidas') and celda.pesticidas > 0:
+                        daño = celda.get_daño_pesticida() if hasattr(celda, 'get_daño_pesticida') else 0
+                        # Aplicar daño si pasa por una flor con pesticidas
+                        daño = self.abeja.aplicar_daño_por_flor(self.board, (f, c))
+
+                    if daño > 0: self.mensaje += f" 💥 ¡Daño -{daño}!"
                     self.finalizar_turno_jugador()
                 else:
                     if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
@@ -762,17 +805,14 @@ class BeeGameGUI:
         else:
             self.mensaje = "🏠 Ya estás en casa o no hay ruta disponible."
 
-    def accion_descargar(self):
-        if self.board.es_rusc(self.pos_abeja[0], self.pos_abeja[1]):
-            if self.abeja.nectar_cargado > 0:
-                cantidad = self.abeja.nectar_cargado
-                self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
-                self.mensaje = f"🍯 Miel descargada: +{cantidad}"
-                self.finalizar_turno_jugador()
-            else:
-                self.mensaje = "🎒 No tienes néctar para descargar."
-        else:
-            self.mensaje = "🏠 Debes estar en el rusc para descargar."
+    def accion_ia(self):
+        self.usar_expectimax = not self.usar_expectimax
+        self.usar_qlearning = not self.usar_expectimax  # Alterna el otro algoritmo
+        
+        # Actualizar mensaje y consola
+        estado_txt = "ACTIVA" if self.usar_expectimax else "DESACTIVADA (Q-Learning ACTIVO)"
+        self.mensaje = f"🤖 IA Expectimax {estado_txt}."
+        print(f"[INFO] IA Expectimax {estado_txt}.")
 
     def actualizar_a_star(self):
         self.timer_a_star += 1
@@ -804,13 +844,13 @@ class BeeGameGUI:
     def turno_humanidad(self):
         if self.game_over: return
         self.turno += 1
-        
+        acciones_validas = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
         accion_realizada = False
-        
+        import time
         if self.usar_expectimax:
-            # ===== MODO EXPECTIMAX: IA INTELIGENTE =====
+            # ===== MODO EXPECTIMAX: IA INTELIGENTE ===== 
             self.calculando_ia = True
-            import time
+            
             inicio = time.time()
             
             # Crear estado actual del juego
@@ -864,7 +904,59 @@ class BeeGameGUI:
             self.tiempo_calculo_ia = time.time() - inicio
             self.nodos_explorados = self.ai.nodes_explored
             self.calculando_ia = False
+        elif self.usar_qlearning:
+            # ===== MODO Q Learning =====
+            self.calculando_ia = True
             
+            inicio = time.time()
+            # 1. Observar estat actual S
+            estat_actual = self.q_agent.obtenir_estat_abstracte(self.board, self.pos_abeja)
+            
+            # 2. Triar acció A
+            accio = self.q_agent.triar_accio(estat_actual, acciones_validas)
+            
+            if accio:
+                tipo, pos = accio
+                
+                # 3. Executar acció i calcular Recompensa immediata (Reward)
+                recompensa = 0
+                if tipo == 'pesticida':
+                    f, c = pos
+                    flor = self.board.get_celda(f, c)
+                    flor.aplicar_pesticida()
+                    self.mensaje = f"🤖 Q-Learning: Pesticida en ({f},{c})"
+                    
+                    # RECOMPENSA: Més alta si està a prop de l'abella
+                    dist = abs(f - self.pos_abeja[0]) + abs(c - self.pos_abeja[1])
+                    if dist <= 1: recompensa = 10  # Molt bé, li has donat
+                    elif dist <= 2: recompensa = 5
+                    else: recompensa = -1 # Malgastat lluny
+                    
+                    accion_realizada = True
+                    
+                elif tipo == 'obstaculo':
+                    exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
+                    if exito:
+                        self.mensaje = f"🤖 Q-Learning: Obstacle en ({pos[0]},{pos[1]})"
+                        # RECOMPENSA: Bloquejar camí
+                        recompensa = 2
+                        accion_realizada = True
+                    else:
+                        recompensa = -5 # Acció il·legal
+            
+                # 4. Observar nou estat S' i Actualitzar Q-Table
+                nou_estat = self.q_agent.obtenir_estat_abstracte(self.board, self.pos_abeja)
+                # Obtenim les accions futures (aproximades, suposem que són similars)
+                noves_accions = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+                
+                self.q_agent.update(estat_actual, accio, recompensa, nou_estat, noves_accions)
+                
+                # Debug (Opcional)
+                # print(f"Q-Update: {estat_actual} -> {tipo} -> R:{recompensa}")
+            # Guardar estadísticas
+            self.tiempo_calculo_ia = time.time() - inicio
+            self.nodos_explorados = self.ai.nodes_explored
+            self.calculando_ia = False
         else:
             # ===== MODO SIMPLE: IA BÁSICA (Original) =====
             acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
@@ -920,7 +1012,23 @@ class BeeGameGUI:
             self.mensaje = msg
         else:
             self.turno_jugador = True
-
+    def choose_action(self,state):
+        accions = []
+        if random.random() < epsilon:
+            return random.choice(accions) 
+        else:
+            return max(self.q_table[state], key=self.q_table[state].get) 
+    def step(self, state, action):
+        return None
+    def update_q_table(self, state, action, reward, next_state):
+        old_val = self.q_table[state][action]
+        future_max = max(self.q_table[next_state].values())
+        
+        target = reward + gamma * future_max
+        new_val = old_val + alpha * (target - old_val)
+        
+        self.q_table[state][action] = new_val
+        return abs(new_val - old_val)
     def actualizar_evento_climatico(self):
         if self.mostrar_evento_clima:
             self.timer_evento_clima += 1
@@ -958,10 +1066,12 @@ class BeeGameGUI:
                         if self.turno_jugador and not self.game_over:
                             for key, rect in self.botones.items():
                                 if rect.collidepoint(pos):
+                                    
                                     if key == 'recoger': self.recoger_nectar()
                                     elif key == 'descansar': self.accion_descansar()
                                     elif key == 'a_star': self.accion_a_star()
-                                    elif key == 'descargar': self.accion_descargar()
+                                    elif key == 'IA': self.accion_ia()
+                                    if key != 'recoger':self.celda_seleccionada = None
                                     clicked_btn = True
                                     break
                         
@@ -1005,5 +1115,5 @@ class BeeGameGUI:
         sys.exit()
 
 if __name__ == "__main__":
-    juego = BeeGameGUI(filas=8, columnas=8, nectar_objetivo=50)
+    juego = BeeGameGUI(filas=9, columnas=9, nectar_objetivo=50)
     juego.run()
