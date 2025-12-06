@@ -1,9 +1,11 @@
 from . import board
 import heapq
 
+import random # necesario para A* con aleatoriedad
+
 class Bee():
     
-    def  __init__(self, life, energia=100, capacidad_nectar=50, first_move=True, name="🐝", player_name="Bee"):
+    def  __init__(self, life, energia=100, capacidad_nectar=50, first_move=True, name="🐝", player_name="Bee", factor_a_star=0.5):
         self.life = life
         self.max_vida = life
         self.energia = energia
@@ -17,6 +19,7 @@ class Bee():
         self.coste_movimiento = 5  # Energía que cuesta moverse
         self.coste_recoleccion = 3  # Energía que cuesta recoger néctar
         self.nectar_por_flor = 10  # Cantidad de néctar que se obtiene por flor
+        self.factor_a_star = factor_a_star  # Controla cuánta aleatoriedad se inyecta en A*
     
     def to_string(self):
         return f"Life: {self.life}/{self.max_vida}, Energía: {self.energia}/{self.max_energia}, Néctar: {self.nectar_cargado}/{self.capacidad_nectar}, Icono: {self.name}"
@@ -166,11 +169,13 @@ class Bee():
         self.life = self.max_vida
         return True
     
-    def calcular_ruta_a_rusc(self, tablero, pos_actual):
-        """Calcula la ruta óptima al rusc usando el algoritmo A*."""
-        return self.a_star(tablero, pos_actual, tablero.rusc_pos)
+    def calcular_ruta_a_rusc(self, tablero, pos_actual, factor_aleatorio=None):
+        """Calcula la ruta al rusc usando A* con aleatoriedad controlada."""
+        factor = self.factor_a_star if factor_aleatorio is None else factor_aleatorio
+        return self.a_star_random(tablero, pos_actual, tablero.rusc_pos, factor_aleatorio=factor)
     
-    def a_star(self, tablero, inicio, objetivo):
+    # A* CON aleatoriedad
+    def a_star_random(self, tablero, inicio, objetivo, factor_aleatorio=0.5):
         """Implementa el algoritmo A* para encontrar la ruta óptima.
         Retorna una lista de posiciones desde inicio hasta objetivo.
         """
@@ -198,6 +203,9 @@ class Bee():
             
             # Explorar vecinos
             vecinos = self.next_moves(tablero, actual)
+
+            # Mezclar los vecinos para el orden de evaluación
+            # para que no sea siempre arriba, abajo, izquerda, derecha
             for vecino in vecinos:
                 if vecino in closed_set:
                     continue
@@ -207,7 +215,12 @@ class Bee():
                 
                 g_nuevo = g + 1
                 h = heuristica(vecino, objetivo)
-                f_nuevo = g_nuevo + h
+
+                # Aleatoriedad:
+                # generamos un coste extra aleatorio, esto aplica la aleatoriedad
+                # el factor_aleatorio hasta como de mal puede jugar, mas alto, peor jugará, si toca el numero mas alto
+                ruido = random.uniform(0, factor_aleatorio)
+                f_nuevo = g_nuevo + h + ruido
                 
                 nuevo_camino = camino + [vecino]
                 heapq.heappush(open_set, (f_nuevo, g_nuevo, vecino, nuevo_camino))

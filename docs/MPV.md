@@ -27,7 +27,7 @@
 - [x] **Acción Especial (Algoritmo A*)**:
     - [x] Implementar botón "volver al rusc".
     - [x] Calcular ruta óptima usando algoritmo de búsqueda $A^{*}$ ($f(n) = g(n) + h(n)$).
-    - [ ] **A* con Aleatoriedad**: Introducir factor estocástico (noise) en costes iguales para evitar rutas deterministas/repetitivas.
+    - [x] **A* con Aleatoriedad**: Introducir factor estocástico (noise) en costes iguales para evitar rutas deterministas/repetitivas.
 
 ### 2.2 Agente MIN (Humanidad - Controlado por IA)
 - [x] **Acciones**:

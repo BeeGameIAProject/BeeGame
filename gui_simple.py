@@ -113,12 +113,13 @@ class BeeGameGUI:
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
         
-        # Animación A*
+        # Animación A* random
         self.moviendo_a_star = False
         self.ruta_a_star = []
         self.paso_a_star = 0
         self.timer_a_star = 0
         self.velocidad_a_star = 10 
+        self.factor_random = 0.5  # Se ajusta según clima
         
         # Eventos clima
         self.mostrar_evento_clima = False
@@ -631,7 +632,7 @@ class BeeGameGUI:
             label = key.replace("_", " ").upper()
             if key == "recoger": icon = "🌼"
             elif key == "descansar": icon = "💤"
-            elif key == "a_star": icon = "🏠"
+            elif key == "a_star_random": icon = "🏠"
             elif key == "descargar": icon = "📥"
             
             # Render texto
@@ -691,7 +692,9 @@ class BeeGameGUI:
 
                 self.pos_abeja = destino
                 self.mensaje = f"🐝 Movimiento a ({fila}, {col})"
-                if daño > 0: self.mensaje += f" 💥 ¡Daño -{daño}!"
+                if daño > 0:
+                    self.mensaje += f" 💥 ¡Daño -{daño}! ¡Abeja desorientada!"
+                    self.factor_random = 0.75
 
                 if self.board.es_rusc(fila, col):
                     nectar_descargado = self.abeja.nectar_cargado
@@ -701,6 +704,9 @@ class BeeGameGUI:
                         self.mensaje = f"🏠 ¡En casa! Energía y vida recuperadas. Miel descargada: {nectar_descargado}"
                     else:
                         self.mensaje = "🏠 ¡En casa! Energía y vida recuperadas."
+                    if self.factor_random > 0.8:
+                        self.mensaje = "La abeja ha descansado, recupera la orientación"
+                    self.factor_random = 0.25
 
                 self.finalizar_turno_jugador()
                 return True
@@ -742,7 +748,11 @@ class BeeGameGUI:
 
     def accion_a_star(self):
         if self.game_over or self.moviendo_a_star: return
-        ruta = self.abeja.calcular_ruta_a_rusc(self.board, self.pos_abeja)
+        ruta = self.abeja.calcular_ruta_a_rusc(
+            self.board,
+            self.pos_abeja,
+            factor_aleatorio=self.factor_random
+        )
         if ruta and len(ruta) > 1:
             self.moviendo_a_star = True
             self.ruta_a_star = ruta
@@ -882,8 +892,15 @@ class BeeGameGUI:
         if self.turno % 4 == 0:
             self.eventos_azar.generar_evento_clima()
             self.clima_actual = self.eventos_azar.clima_actual
+            # Ajustar el factor de aleatoriedad de A* según clima
+            if self.clima_actual == "Lluvia":
+                self.factor_random = 0.8  # Más ruido: peor navegación
+            elif self.clima_actual == "Sol":
+                self.factor_random = 0.25  # Menos ruido: navegación más estable
+            else:
+                self.factor_random = 0.5  # Valor base en clima normal
             self.eventos_azar.aplicar_efecto_clima(self.board)
-            self.mensaje_evento_clima = f"Clima: {self.clima_actual.upper()}"
+            self.mensaje_evento_clima = f"Clima: {self.clima_actual.upper()} (A* random={self.factor_random:.2f})"
             self.mostrar_evento_clima = True
             self.timer_evento_clima = 0
             
