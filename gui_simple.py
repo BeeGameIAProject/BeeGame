@@ -2,6 +2,7 @@
 Interfaz Gráfica Mejorada (GUI) para el juego BeeGame
 MVP7: Implementación con Pygame - Visuals Overhaul
 """
+from statistics import mean
 import pygame
 import sys
 import math
@@ -126,7 +127,7 @@ class BeeGameGUI:
         self.calculando_ia = False
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
-        self.ia_error = 0
+        self.ia_error = [0]
 
         # Control de IA QL
         self.q_table = {}
@@ -493,7 +494,7 @@ class BeeGameGUI:
         self.screen.blit(estado_surf, (x + 15, y + 35))
         
         # Estadísticas (si está activa)
-        if self.usar_expectimax:
+        if self.usar_expectimax or self.usar_qlearning:
             # Nodos explorados
             nodos_txt = self.font_small.render(f"Nodos: {self.nodos_explorados}", True, C_TEXTO_SECUNDARIO)
             self.screen.blit(nodos_txt, (x + 15, y + 53))
@@ -503,7 +504,7 @@ class BeeGameGUI:
             self.screen.blit(tiempo_txt, (x + 110, y + 53))
 
             # Error de cálculo
-            error_txt = self.font_small.render(f"Error: {self.ia_error:.2f}", True, C_TEXTO_SECUNDARIO)
+            error_txt = self.font_small.render(f"Error: {self.ia_error[-1]:.0f} {mean(self.ia_error):.2f}", True, C_TEXTO_SECUNDARIO)
             self.screen.blit(error_txt, (x + 220, y + 53))
         
         # Indicador de procesamiento
@@ -923,7 +924,7 @@ class BeeGameGUI:
                 dist_flor_cercana = min(distancias)
             
             # C) El Error es la diferencia
-            self.ia_error = abs(dist_pesticida_abeja - dist_flor_cercana)
+            self.ia_error.append(abs(dist_pesticida_abeja - dist_flor_cercana))
             self.calculando_ia = False
         elif self.usar_qlearning:
             # ===== MODO Q Learning =====
@@ -977,6 +978,19 @@ class BeeGameGUI:
             # Guardar estadísticas
             self.tiempo_calculo_ia = time.time() - inicio
             self.nodos_explorados = self.ai.nodes_explored
+            # --- CÁLCULO DEL ERROR USANDO MÉTODO DE HUMANIDAD ---
+            # A) Distancia entre NUEVO PESTICIDA y ABEJA
+            dist_pesticida_abeja = self.humanidad_agente.distancia_manhattan(pos, self.pos_abeja)
+            
+            # B) Distancia entre ABEJA y FLOR MÁS CERCANA (VIVA)
+            flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
+            dist_flor_cercana = 0
+            if flores_vivas:
+                distancias = [self.humanidad_agente.distancia_manhattan(p, self.pos_abeja) for p in flores_vivas]
+                dist_flor_cercana = min(distancias)
+            
+            # C) El Error es la diferencia
+            self.ia_error.append(abs(dist_pesticida_abeja - dist_flor_cercana))
             self.calculando_ia = False
         else:
             # ===== MODO SIMPLE: IA BÁSICA (Original) =====
@@ -1013,7 +1027,7 @@ class BeeGameGUI:
             else:
                 self.factor_random = 0.5  # Valor base en clima normal
             self.eventos_azar.aplicar_efecto_clima(self.board)
-            self.mensaje_evento_clima = f"Clima: {self.clima_actual.upper()} (A* random={self.factor_random:.2f})"
+            self.mensaje_evento_clima = f"Clima: {self.clima_actual.upper()}"
             self.mostrar_evento_clima = True
             self.timer_evento_clima = 0
             
