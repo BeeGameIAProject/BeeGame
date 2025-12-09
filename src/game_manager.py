@@ -161,11 +161,11 @@ class GameManager():
         barra = "█" * barra_llena + "░" * barra_vacia
         print(f"   [{barra}]")
         
-        print(f"\n🐝 Estado de la Abeja:")
+        print(f"\nEstado de la Abeja:")
         print(f"   Vida: {estado['vida_abeja']}/100")
         print(f"   Energía: {estado['energia_abeja']}/100")
         
-        print(f"\n🌼 Flores:")
+        print(f"\nFlores:")
         print(f"   Vivas: {estado['flores_vivas']}/{estado['flores_totales']}")
         
         if estado['terminado']:

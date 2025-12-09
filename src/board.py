@@ -149,20 +149,4 @@ class Board():
         """Imprime una representación visual del tablero."""
         print("\n" + "="*50)
         print(f"Turno: {self.turno} | Néctar en Rusc: {self.nectar_en_rusc}")
-        print("="*50)
-        for i in range(self.filas):
-            fila_str = ""
-            for j in range(self.columnas):
-                celda = self.grid[i][j]
-                if celda is None:
-                    fila_str += "⬜ "
-                elif celda == "RUSC":
-                    fila_str += "🏠 "
-                elif celda == "OBSTACULO":
-                    fila_str += "🪨 "
-                elif isinstance(celda, Flower):
-                    fila_str += celda.get_symbol() + " "
-                else:
-                    fila_str += "? "
-            print(fila_str)
         print("="*50 + "\n")

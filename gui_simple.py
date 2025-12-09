@@ -126,6 +126,7 @@ class BeeGameGUI:
         self.calculando_ia = False
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
+        self.ia_error = 0
 
         # Control de IA QL
         self.q_table = {}
@@ -482,7 +483,7 @@ class BeeGameGUI:
         pygame.draw.rect(self.screen, (220, 220, 230), rect_ia, 1, border_radius=10)
         
         # Título
-        titulo = self.font_bold.render("🤖 IA Expectimax", True, C_TEXTO_PRINCIPAL)
+        titulo = self.font_bold.render("IA Expectimax", True, C_TEXTO_PRINCIPAL)
         self.screen.blit(titulo, (x + 15, y + 10))
         
         # Toggle Estado
@@ -499,7 +500,11 @@ class BeeGameGUI:
             
             # Tiempo de cálculo
             tiempo_txt = self.font_small.render(f"Tiempo: {self.tiempo_calculo_ia*1000:.0f}ms", True, C_TEXTO_SECUNDARIO)
-            self.screen.blit(tiempo_txt, (x + 180, y + 53))
+            self.screen.blit(tiempo_txt, (x + 110, y + 53))
+
+            # Error de cálculo
+            error_txt = self.font_small.render(f"Error: {self.ia_error:.2f}", True, C_TEXTO_SECUNDARIO)
+            self.screen.blit(error_txt, (x + 220, y + 53))
         
         # Indicador de procesamiento
         if self.calculando_ia:
@@ -663,12 +668,7 @@ class BeeGameGUI:
             pygame.draw.rect(self.screen, border, rect, 2, border_radius=8)
             
             # Texto e Icono (simulado con texto)
-            label = key.replace("_", " ").upper()
-            if key == "recoger": icon = "🌼"
-            elif key == "descansar": icon = "💤"
-            elif key == "a_star": icon = "🏠"
-            elif key == "descargar": icon = "📥"
-            
+            label = key.replace("_", " ").upper()            
             # Render texto
             #try:
                 # Intentar renderizar emoji si la fuente lo soporta, si no, solo texto
@@ -725,9 +725,9 @@ class BeeGameGUI:
                      daño = celda.get_daño_pesticida() if hasattr(celda, 'get_daño_pesticida') else 0
 
                 self.pos_abeja = destino
-                self.mensaje = f"🐝 Movimiento a ({fila}, {col})"
+                self.mensaje = f"Movimiento a ({fila}, {col})"
                 if daño > 0:
-                    self.mensaje += f" 💥 ¡Daño -{daño}! ¡Abeja desorientada!"
+                    self.mensaje += f"  ¡Daño -{daño}! ¡Abeja desorientada!"
                     self.factor_random = 0.75
 
                 if self.board.es_rusc(fila, col):
@@ -735,9 +735,9 @@ class BeeGameGUI:
                     self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
                     self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
                     if nectar_descargado > 0:
-                        self.mensaje = f"🏠 ¡En casa! Energía y vida recuperadas. Miel descargada: {nectar_descargado}"
+                        self.mensaje = f"¡En casa! Energía y vida recuperadas. Miel descargada: {nectar_descargado}"
                     else:
-                        self.mensaje = "🏠 ¡En casa! Energía y vida recuperadas."
+                        self.mensaje = "¡En casa! Energía y vida recuperadas."
                     if self.factor_random > 0.8:
                         self.mensaje = "La abeja ha descansado, recupera la orientación"
                     self.factor_random = 0.25
@@ -745,14 +745,14 @@ class BeeGameGUI:
                 self.finalizar_turno_jugador()
                 return True
             else:
-                self.mensaje = "⚠️ ¡Sin energía suficiente para moverse!"
+                self.mensaje = " ¡Sin energía suficiente para moverse!"
         else:
-            self.mensaje = "🪨 Camino bloqueado por obstáculo."
+            self.mensaje = " Camino bloqueado por obstáculo."
         return False
 
     def recoger_nectar(self):
         if self.game_over or not self.celda_seleccionada: 
-            self.mensaje = "👆 Selecciona una flor primero (click derecho)."
+            self.mensaje = " Selecciona una flor primero (click derecho)."
             return
         
         f, c = self.celda_seleccionada
@@ -760,7 +760,7 @@ class BeeGameGUI:
         if abs(self.pos_abeja[0]-f) <= 1 and abs(self.pos_abeja[1]-c) <= 1:
             if self.board.es_flor(f, c):
                 if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
-                    self.mensaje = f"🌼 ¡Néctar +10! Flor polinizada en ({f},{c})"
+                    self.mensaje = f"¡Néctar +10! Flor polinizada en ({f},{c})"
                     # Chequeo pesticida
                     celda = self.board.get_celda(f, c)
                     daño = 0
@@ -769,24 +769,24 @@ class BeeGameGUI:
                         # Aplicar daño si pasa por una flor con pesticidas
                         daño = self.abeja.aplicar_daño_por_flor(self.board, (f, c))
 
-                    if daño > 0: self.mensaje += f" 💥 ¡Daño -{daño}!"
+                    if daño > 0: self.mensaje += f"  ¡Daño -{daño}!"
                     self.finalizar_turno_jugador()
                 else:
                     if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
-                        self.mensaje = "⚠️ Sin energía para recoger néctar."
+                        self.mensaje = "Sin energía para recoger néctar."
                     elif not self.abeja.puede_cargar_nectar():
-                        self.mensaje = "🎒 Mochila llena. Ve al rusc a descargar."
+                        self.mensaje = "Mochila llena. Ve al rusc a descargar."
                     else:
-                        self.mensaje = "❌ Flor muerta o sin néctar."
+                        self.mensaje = "Flor muerta o sin néctar."
             else:
-                self.mensaje = "❌ Eso no es una flor."
+                self.mensaje = "Eso no es una flor."
         else:
-            self.mensaje = "📏 ¡Demasiado lejos! Muévete más cerca."
+            self.mensaje = "¡Demasiado lejos! Muévete más cerca."
 
     def accion_descansar(self):
         if self.game_over: return
         self.abeja.descansar()
-        self.mensaje = "💤 Descansando... Energía +20"
+        self.mensaje = "Descansando... Energía +20"
         self.finalizar_turno_jugador()
 
     def accion_a_star(self):
@@ -819,7 +819,7 @@ class BeeGameGUI:
         
         # Actualizar mensaje y consola
         estado_txt = "ACTIVA" if self.usar_expectimax else "DESACTIVADA (Q-Learning ACTIVO)"
-        self.mensaje = f"🤖 IA Expectimax {estado_txt}."
+        self.mensaje = f" IA Expectimax {estado_txt}."
         print(f"[INFO] IA Expectimax {estado_txt}.")
 
     def actualizar_a_star(self):
@@ -840,9 +840,9 @@ class BeeGameGUI:
                     nectar_desc = self.abeja.nectar_cargado
                     self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
                     self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
-                    self.mensaje = f"✅ A* completado. Miel descargada: {nectar_desc}. Vida y energía restauradas."
+                    self.mensaje = f" A* completado. Miel descargada: {nectar_desc}. Vida y energía restauradas."
                 else:
-                    self.mensaje = "✅ A* completado. Llegada a destino."
+                    self.mensaje = " A* completado. Llegada a destino."
                 self.finalizar_turno_jugador()
 
     def finalizar_turno_jugador(self):
@@ -899,18 +899,31 @@ class BeeGameGUI:
                         f, c = pos
                         flor = self.board.get_celda(f, c)
                         flor.aplicar_pesticida()
-                        self.mensaje = f"🤖 IA: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
+                        self.mensaje = f"IA: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
                         accion_realizada = True
                     elif tipo == 'obstaculo':
                         # Usar el método de humanidad que maneja el límite de 4 obstáculos
                         exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
                         if exito:
-                            self.mensaje = f"🤖 IA: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
+                            self.mensaje = f"IA: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
                             accion_realizada = True
             
             # Guardar estadísticas
             self.tiempo_calculo_ia = time.time() - inicio
             self.nodos_explorados = self.ai.nodes_explored
+            # --- CÁLCULO DEL ERROR USANDO MÉTODO DE HUMANIDAD ---
+            # A) Distancia entre NUEVO PESTICIDA y ABEJA
+            dist_pesticida_abeja = self.humanidad_agente.distancia_manhattan(pos, self.pos_abeja)
+            
+            # B) Distancia entre ABEJA y FLOR MÁS CERCANA (VIVA)
+            flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
+            dist_flor_cercana = 0
+            if flores_vivas:
+                distancias = [self.humanidad_agente.distancia_manhattan(p, self.pos_abeja) for p in flores_vivas]
+                dist_flor_cercana = min(distancias)
+            
+            # C) El Error es la diferencia
+            self.ia_error = abs(dist_pesticida_abeja - dist_flor_cercana)
             self.calculando_ia = False
         elif self.usar_qlearning:
             # ===== MODO Q Learning =====
@@ -932,7 +945,7 @@ class BeeGameGUI:
                     f, c = pos
                     flor = self.board.get_celda(f, c)
                     flor.aplicar_pesticida()
-                    self.mensaje = f"🤖 Q-Learning: Pesticida en ({f},{c})"
+                    self.mensaje = f"Q-Learning: Pesticida en ({f},{c})"
                     
                     # RECOMPENSA: Més alta si està a prop de l'abella
                     dist = abs(f - self.pos_abeja[0]) + abs(c - self.pos_abeja[1])
@@ -945,7 +958,7 @@ class BeeGameGUI:
                 elif tipo == 'obstaculo':
                     exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
                     if exito:
-                        self.mensaje = f"🤖 Q-Learning: Obstacle en ({pos[0]},{pos[1]})"
+                        self.mensaje = f"Q-Learning: Obstacle en ({pos[0]},{pos[1]})"
                         # RECOMPENSA: Bloquejar camí
                         recompensa = 2
                         accion_realizada = True

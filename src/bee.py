@@ -5,7 +5,7 @@ import random # necesario para A* con aleatoriedad
 
 class Bee():
     
-    def  __init__(self, life, energia=100, capacidad_nectar=50, first_move=True, name="🐝", player_name="Bee", factor_a_star=0.5):
+    def  __init__(self, life, energia=100, capacidad_nectar=50, first_move=True, player_name="Bee", factor_a_star=0.5):
         self.life = life
         self.max_vida = life
         self.energia = energia
@@ -13,7 +13,6 @@ class Bee():
         self.nectar_cargado = 0
         self.capacidad_nectar = capacidad_nectar
         self.first_move = first_move
-        self.name = name
         self.player_name = player_name
         self.daño_ataque = 10
         self.coste_movimiento = 5  # Energía que cuesta moverse

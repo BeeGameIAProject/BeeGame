@@ -6,7 +6,7 @@ class Humanidad():
     Puede aplicar pesticidas y colocar obstáculos con restricciones de poda estratégica.
     """
     
-    def __init__(self, name="👨", player_name="Humanidad"):
+    def __init__(self, name="Human", player_name="Humanidad"):
         self.name = name
         self.player_name = player_name
         self.radio_pesticida = 2  # Radio de acción para pesticidas (cerca de la abeja)

@@ -62,13 +62,7 @@ class Flower():
         polin = "Polinizada" if self.polinizacion else "No polinizada"
         return f"Flor: {estado}, Vida: {self.vida}/{self.max_vida}, {polin}, Pesticidas: {self.pesticidas}/3"
     
-    def get_symbol(self):
-        """Retorna el símbolo visual de la flor."""
-        if not self.viva:
-            return "❌"
-        if self.polinizacion:
-            return "🌸"
-        return "🌼"
+    
     
     def incrementar_turno_muerta(self):
         """Incrementa el contador de turnos muerta."""

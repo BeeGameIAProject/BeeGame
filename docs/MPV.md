@@ -5,7 +5,7 @@
     - [x] Probar tamaños del tablero 9*9 para que haya casilla central.
 - [x] **Elementos del Tablero**: Colocación inicial del rusc (colmena), flores y obstáculos.
     - [ ] Arreglar emojis de los botones(Mas dificil de lo q parece).
-    - [ ] Arreglar como se ve en el cambio de IA
+    - [x] Arreglar como se ve en el cambio de IA
     - [x] Replantear boton de descargar.
 - [x] **Lógica de las Flores**:
     - [x] Implementar estados: vida, nivel de polinización y contador de pesticidas.
