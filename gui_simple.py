@@ -791,19 +791,27 @@ class BeeGameGUI:
 
     def accion_a_star(self):
         if self.game_over or self.moviendo_a_star: return
-        ruta = self.abeja.calcular_ruta_a_rusc(
-            self.board,
-            self.pos_abeja,
-            factor_aleatorio=self.factor_random
-        )
+        if self.celda_seleccionada:
+            ruta = self.abeja.calcular_ruta_a_rusc(
+                self.board,
+                self.pos_abeja,
+                factor_aleatorio=self.factor_random,
+                destino=self.celda_seleccionada
+            )
+        else:
+            ruta = self.abeja.calcular_ruta_a_rusc(
+                self.board,
+                self.pos_abeja,
+                factor_aleatorio=self.factor_random
+            )
         if ruta and len(ruta) > 1:
             self.moviendo_a_star = True
             self.ruta_a_star = ruta
             self.paso_a_star = 1
             self.timer_a_star = 0
-            self.mensaje = f"🤖 Piloto automático A* activado ({len(ruta)-1} pasos)..."
+            self.mensaje = f"Piloto automático A* activado ({len(ruta)-1} pasos)..."
         else:
-            self.mensaje = "🏠 Ya estás en casa o no hay ruta disponible."
+            self.mensaje = "Ya estás en casa o no hay ruta disponible."
 
     def accion_ia(self):
         self.usar_expectimax = not self.usar_expectimax

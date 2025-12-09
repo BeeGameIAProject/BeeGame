@@ -63,4 +63,4 @@ class QLearningAgent:
             
         # Fórmula Q-Learning
         new_q = old_q + self.alpha * (reward + self.gamma * max_q_next - old_q)
-        self.q_table[key] = new_q
+        self.q_table[key] = new_q 

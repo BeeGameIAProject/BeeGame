@@ -170,10 +170,13 @@ class Bee():
         self.life = self.max_vida
         return True
     
-    def calcular_ruta_a_rusc(self, tablero, pos_actual, factor_aleatorio=None):
+    def calcular_ruta_a_rusc(self, tablero, pos_actual, factor_aleatorio=None, destino=None):
         """Calcula la ruta al rusc usando A* con aleatoriedad controlada."""
+
         factor = self.factor_a_star if factor_aleatorio is None else factor_aleatorio
-        return self.a_star_random(tablero, pos_actual, tablero.rusc_pos, factor_aleatorio=factor)
+        if destino is None:
+            destino = tablero.rusc_pos
+        return self.a_star_random(tablero, pos_actual, destino, factor_aleatorio=factor)
     
     # A* CON aleatoriedad
     def a_star_random(self, tablero, inicio, objetivo, factor_aleatorio=0.5):
