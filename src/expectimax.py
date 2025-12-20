@@ -267,7 +267,7 @@ class ExpectimaxAI():
         if estado.tablero.contar_flores_vivas() == 0:
             return True
         
-        # Victoria: Néctar objetivo alcanzado (ejemplo: 100)
+        # Victoria: Néctar objetivo alcanzado (consideramos que 100 es un buen objetivo)
         if estado.tablero.nectar_en_colmena >= 100:
             return True
         

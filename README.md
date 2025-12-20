@@ -6,49 +6,49 @@
 
 ---
 
-## 📋 ¿Qué es BeeGame?
+## ¿Qué es BeeGame?
 
 **BeeGame** es un juego de estrategia por turnos donde controlas una abeja que debe sobrevivir y recolectar néctar en un entorno hostil. El proyecto implementa algoritmos de **Inteligencia Artificial** avanzados como **Expectimax**, **A\*** y funciones heurísticas para crear una experiencia de juego desafiante.
 
-### 🌍 Objetivo Educativo
+### Objetivo Educativo
 
 Este proyecto busca **concienciar sobre la importancia de las abejas y el medio ambiente** a través de una experiencia interactiva. Al jugar, experimentas los desafíos reales que enfrentan las abejas en ecosistemas afectados por pesticidas y la actividad humana. El juego demuestra cómo:
 
-- 🐝 Las abejas son **esenciales para la polinización** y el equilibrio ecológico
-- 🧪 Los **pesticidas** representan una amenaza grave para su supervivencia
-- 🌸 La **desaparición de flores** afecta directamente la cadena alimentaria
-- 🚧 Los **obstáculos ambientales** dificultan su labor polinizadora
+- Las abejas son **esenciales para la polinización** y el equilibrio ecológico
+- Los **pesticidas** representan una amenaza grave para su supervivencia
+- La **desaparición de flores** afecta directamente la cadena alimentaria
+- Los **obstáculos ambientales** dificultan su labor polinizadora
 
 A través de la mecánica del juego, se evidencia la lucha constante de estos insectos por sobrevivir mientras cumplen su función vital en la naturaleza.
 
 ---
 
-## 🎮 Cómo Funciona
+## Cómo Funciona
 
 ### El Tablero
 - Cuadrícula de **10×10 casillas** (configurable)
-- Elementos: 🏠 Rusc (colmena), 🌸 Flores, 🚧 Obstáculos, 🐝 Abeja
+- Elementos: Rusc (colmena), Flores, Obstáculos, Abeja
 
 ### La Abeja (Tú)
-- **❤️ Vida**: 100 puntos
-- **⚡ Energía**: 100 puntos (gasta 2 por movimiento)
-- **🍯 Néctar**: Capacidad de 50 unidades
+- **Vida**: 100 puntos
+- **Energía**: 100 puntos (gasta 2 por movimiento)
+- **Néctar**: Capacidad de 50 unidades
 - **Objetivo**: Acumular unidades de néctar en el rusc
 
 ### La Humanidad (IA)
 - Intenta impedir que ganes usando:
-  - 🧪 **Pesticidas**: Matan flores (mueren al acumular 3)
-  - 🚧 **Obstáculos**: Bloquean tu paso
+  - **Pesticidas**: Matan flores (mueren al acumular 3)
+  - **Obstáculos**: Bloquean tu paso
 
 ### Eventos Aleatorios
 Cada 4 (aproximadamente) turnos ocurre un evento climático:
-- ☔ **Lluvia (10%)**: Limpia pesticidas de las flores
-- ☀️ **Sol (15%)**: Aumenta reproducción de flores
-- 🌤️ **Normal (75%)**: Sin efectos
+- **Lluvia (10%)**: Limpia pesticidas de las flores
+- **Sol (15%)**: Aumenta reproducción de flores
+- **Normal (75%)**: Sin efectos
 
 ---
 
-## 🚀 Instalación
+## Instalación
 
 ```bash
 # 1. Clonar o descargar el proyecto
@@ -69,37 +69,37 @@ python gui.py
 
 ---
 
-## 🎯 Cómo Jugar
+## Cómo Jugar
 
 ### Configuración Inicial
 Al iniciar el juego, elige:
 - Tamaño del tablero
 - Número de flores
 - Modo de juego:
-  - **👤 Jugador**: Tú controlas la abeja
-  - **🤖 IA Básica**: La humanidad juega aleatoriamente
-  - **🧠 Expectimax**: Ambos usan IA avanzada
+  - **Jugador**: Tú controlas la abeja
+  - **IA Básica**: La humanidad juega aleatoriamente
+  - **Expectimax**: Ambos usan IA avanzada
 
 ### Controles
 
-| Acción | Cómo hacerlo |
-|--------|--------------|
-| **Mover** | Click en casilla adyacente |
-| **Polinizar** | Botón "🌸 Polinizar" |
-| **Descansar** | Botón "😴 Descansar" (recupera 10 energía) |
-| **Volver al Rusc** | Botón "🏠 Volver al Rusc" (usa A* para ruta óptima) |
+| Acción | Cómo hacerlo                                                              |
+|--------|---------------------------------------------------------------------------|
+| **Mover** | Click en casilla adyacente                                                |
+| **Polinizar** | Botón "Recoger"                                                           |
+| **Descansar** | Botón "Descansar" (recupera 10 energía)                                   |
+| **Volver al Rusc** | Botón "A Star" (usa A* para buscar una ruta óptima y volver a la colmena) |
 
 
 ### Ganar y Perder
 
 | Resultado | Condición |
 |-----------|-----------|
-| 💀 **DERROTA** | Tu vida llega a 0 |
-| 🥀 **DERROTA** | No quedan flores vivas en el tablero |
+| **DERROTA** | Tu vida llega a 0 |
+| **DERROTA** | No quedan flores vivas en el tablero |
 
 ---
 
-## 🧠 Tecnología Utilizada
+## Tecnología Utilizada
 
 ### Algoritmos de IA
 - **Expectimax**: Toma decisiones óptimas considerando probabilidades
@@ -113,7 +113,7 @@ Al iniciar el juego, elige:
 
 ---
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 BeeGame/
@@ -130,7 +130,7 @@ BeeGame/
 
 ---
 
-## 🎓 ¿Qué Aprenderás?
+## ¿Qué Aprenderás?
 
 Este proyecto demuestra:
 - Algoritmos de búsqueda informada (A*)
@@ -141,7 +141,7 @@ Este proyecto demuestra:
 
 ---
 
-## 📞 Ayuda
+## Ayuda
 
 ¿Problemas para ejecutar el juego?
 
@@ -152,7 +152,5 @@ Este proyecto demuestra:
 ---
 
 <div align="center">
-
-Hecho con ❤️ y 🐝 en Python
 
 </div>
