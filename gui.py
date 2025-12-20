@@ -479,18 +479,21 @@ class BeeGameGUI:
         self.help_clima_rect = help_rect
 
     def dibujar_widget_ia(self, x, y):
-        """Dibuja información del estado de la IA Expectimax"""
+        """
+        Dibuja información del estado de la IA (Expectimax o Q-Learning)
+        """
         rect_ia = pygame.Rect(x, y, 350, 75)
         pygame.draw.rect(self.screen, (255, 255, 255), rect_ia, border_radius=10)
         pygame.draw.rect(self.screen, (220, 220, 230), rect_ia, 1, border_radius=10)
 
-        # Título
-        titulo = self.font_bold.render("IA Expectimax", True, C_TEXTO_PRINCIPAL)
+        # Título dinámico: muestra qué IA está funcionando
+        nombre_ia = "IA Expectimax" if self.usar_expectimax else "IA Q-Learning"
+        titulo = self.font_bold.render(nombre_ia, True, C_TEXTO_PRINCIPAL)
         self.screen.blit(titulo, (x + 15, y + 10))
 
-        # Toggle Estado
-        estado_txt = "ACTIVA" if self.usar_expectimax else "DESACTIVADA"
-        color_estado = (50, 200, 50) if self.usar_expectimax else (200, 50, 50)
+        # Estado: siempre ACTIVA porque alternamos entre una y otra
+        estado_txt = "ACTIVADO"
+        color_estado = (50, 200, 50)  # Verde
         estado_surf = self.font_small.render(f"Estado: {estado_txt}", True, color_estado)
         self.screen.blit(estado_surf, (x + 15, y + 35))
 
@@ -501,7 +504,7 @@ class BeeGameGUI:
             self.screen.blit(nodos_txt, (x + 15, y + 53))
 
             # Tiempo de cálculo
-            tiempo_txt = self.font_small.render(f"Tiempo: {self.tiempo_calculo_ia*1000:.0f}ms", True, C_TEXTO_SECUNDARIO)
+            tiempo_txt = self.font_small.render(f"Tiempo: {self.tiempo_calculo_ia * 1000:.0f}ms", True, C_TEXTO_SECUNDARIO)
             self.screen.blit(tiempo_txt, (x + 110, y + 53))
 
             # Error de cálculo
@@ -829,8 +832,8 @@ class BeeGameGUI:
         self.usar_qlearning = not self.usar_expectimax  # Alterna el otro algoritmo
 
         # Actualizar mensaje y consola
-        estado_txt = "ACTIVA" if self.usar_expectimax else "DESACTIVADA (Q-Learning ACTIVO)"
-        self.mensaje = f" IA Expectimax {estado_txt}."
+        estado_txt = "ACTIVADO" if self.usar_expectimax else "DESACTIVADO (Q-Learning ACTIVADO)"
+        self.mensaje = f"Expectimax {estado_txt}."
         print(f"[INFO] IA Expectimax {estado_txt}.")
 
     def actualizar_a_star(self):
@@ -910,13 +913,13 @@ class BeeGameGUI:
                         f, c = pos
                         flor = self.board.get_celda(f, c)
                         flor.aplicar_pesticida()
-                        self.mensaje = f"IA: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
+                        self.mensaje = f"Expectimax: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
                         accion_realizada = True
                     elif tipo == 'obstaculo':
                         # Usar el método de humanidad que maneja el límite de 4 obstáculos
                         exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
                         if exito:
-                            self.mensaje = f"IA: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
+                            self.mensaje = f"Expectimax: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
                             accion_realizada = True
 
             # Guardar estadísticas

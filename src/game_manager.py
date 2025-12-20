@@ -34,7 +34,7 @@ class GameManager():
         if self.verificar_victoria(tablero):
             self.juego_terminado = True
             self.resultado = 'VICTORIA'
-            self.mensaje_final = f" ¡VICTORIA! Has llegado al objetivo de néctar" # Has acumulado {tablero.nectar_en_colmena} de néctar en la colmena
+            self.mensaje_final = f" ¡VICTORIA! Has llegado al objetivo de néctar"
             return True, self.resultado, self.mensaje_final
         
         # Verificar derrota por muerte de abeja
