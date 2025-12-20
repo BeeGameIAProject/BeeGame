@@ -20,8 +20,8 @@ class Bee():
         self.nectar_por_flor = 10  # Cantidad de néctar que se obtiene por flor
         self.factor_a_star = factor_a_star  # Controla cuánta aleatoriedad se inyecta en A*
     
-    def to_string(self):
-        return f"Life: {self.life}/{self.max_vida}, Energía: {self.energia}/{self.max_energia}, Néctar: {self.nectar_cargado}/{self.capacidad_nectar}, Icono: {self.name}"
+    # def to_string(self):
+    #     return f"Life: {self.life}/{self.max_vida}, Energía: {self.energia}/{self.max_energia}, Néctar: {self.nectar_cargado}/{self.capacidad_nectar}, Icono: {self.name}"
     
     def is_valid_move(self,board,start,to):
         """Comprueba si el movimiento es válido (estilo rey de ajedrez)."""
@@ -80,7 +80,8 @@ class Bee():
             for df, dc in direcciones
             if 0 <= fila + df < filas and 0 <= col + dc < columnas
         ]
-        return m    
+        return m
+
     def esta_viva(self):
         """Devuelve True si la abeja sigue viva."""
         return self.life > 0
@@ -144,23 +145,23 @@ class Bee():
             self.energia = self.max_energia
         return True
     
-    def descargar_nectar_en_rusc(self, tablero, posicion):
-        """Descarga el néctar en el rusc si la abeja está en esa posición."""
+    def descargar_nectar_en_colmena(self, tablero, posicion):
+        """Descarga el néctar en la colmena si la abeja está en esa posición."""
         fila, col = posicion
-        if not tablero.es_rusc(fila, col):
+        if not tablero.es_colmena(fila, col):
             return False
         
         if self.nectar_cargado == 0:
             return False
         
-        tablero.agregar_nectar_al_rusc(self.nectar_cargado)
+        tablero.agregar_nectar_a_la_colmena(self.nectar_cargado)
         self.nectar_cargado = 0
         return True
     
-    def recuperar_energia_en_rusc(self, tablero, posicion):
-        """Recupera energía y vida completa si está en el rusc."""
+    def recuperar_energia_en_colmena(self, tablero, posicion):
+        """Recupera energía y vida completa si está en la colmena."""
         fila, col = posicion
-        if not tablero.es_rusc(fila, col):
+        if not tablero.es_colmena(fila, col):
             return False
         
         energia_recuperada = self.max_energia - self.energia
@@ -169,12 +170,12 @@ class Bee():
         self.life = self.max_vida
         return True
     
-    def calcular_ruta_a_rusc(self, tablero, pos_actual, factor_aleatorio=None, destino=None):
-        """Calcula la ruta al rusc usando A* con aleatoriedad controlada."""
+    def calcular_ruta_a_colmena(self, tablero, pos_actual, factor_aleatorio=None, destino=None):
+        """Calcula la ruta a la colmena usando A* con aleatoriedad controlada."""
 
         factor = self.factor_a_star if factor_aleatorio is None else factor_aleatorio
         if destino is None:
-            destino = tablero.rusc_pos
+            destino = tablero.pos_colmena
         return self.a_star_random(tablero, pos_actual, destino, factor_aleatorio=factor)
     
     # A* CON aleatoriedad
@@ -230,11 +231,7 @@ class Bee():
         
         return []  # No se encontró ruta
 
-    def printname(self):
-        print(self.name)
+    # def printname(self):
+    #     print(self.name)
 
 
-if __name__ == "__main__":
-    b = Bee(100,True)
-    b.printname()
-    print(b.to_string())

@@ -23,7 +23,7 @@ class Heuristica():
         Pesos:
         w1: Peso para flores vivas
         w2: Peso para flores polinizadas
-        w3: Peso para néctar en rusc
+        w3: Peso para néctar en la colmena
         w4: Peso para néctar cargado
         w5: Peso para vida de la abeja
         w6: Peso para energía de la abeja
@@ -31,7 +31,7 @@ class Heuristica():
         """
         self.w1 = w1  # Flores vivas
         self.w2 = w2  # Flores polinizadas
-        self.w3 = w3  # Néctar en rusc (objetivo principal)
+        self.w3 = w3  # Néctar en la colmena (objetivo principal)
         self.w4 = w4  # Néctar cargado
         self.w5 = w5  # Vida de la abeja
         self.w6 = w6  # Energía de la abeja
@@ -56,7 +56,7 @@ class Heuristica():
         
         # Victoria: objetivo de néctar alcanzado
         nectar_objetivo = 100
-        if estado.tablero.nectar_en_rusc >= nectar_objetivo:
+        if estado.tablero.nectar_en_colmena >= nectar_objetivo:
             return 100000
         
         # Calcular componentes de la heurística
@@ -147,21 +147,21 @@ class Heuristica():
         H_progrés: Valoración del progreso hacia la victoria.
         
         Considera:
-        - Néctar acumulado en el rusc (objetivo principal)
+        - Néctar acumulado en la colmena (objetivo principal)
         - Néctar cargado por la abeja
         - Progreso hacia el objetivo de néctar
         """
         valor = 0
         
-        # Valorar néctar en rusc (objetivo principal del juego)
-        valor += self.w3 * estado.tablero.nectar_en_rusc
+        # Valorar néctar en la colmena (objetivo principal del juego)
+        valor += self.w3 * estado.tablero.nectar_en_colmena
         
         # Valorar néctar cargado (potencial para depositar)
         valor += self.w4 * estado.abeja.nectar_cargado
         
         # Bonus si está cerca de completar el objetivo
         nectar_objetivo = 100
-        progreso = (estado.tablero.nectar_en_rusc + estado.abeja.nectar_cargado) / nectar_objetivo
+        progreso = (estado.tablero.nectar_en_colmena + estado.abeja.nectar_cargado) / nectar_objetivo
         
         if progreso > 0.75:
             valor += 1000  # Muy cerca de ganar
@@ -178,22 +178,22 @@ class Heuristica():
         
         Considera:
         - Distancia a flores (si necesita recoger néctar)
-        - Distancia al rusc (si necesita descargar néctar)
+        - Distancia a la colmena (si necesita descargar néctar)
         - Prioriza según el estado del inventario
         """
         valor = 0
         
         pos_abeja = estado.pos_abeja
         
-        # Si tiene néctar cargado, priorizar estar cerca del rusc
+        # Si tiene néctar cargado, priorizar estar cerca de la colmena
         if estado.abeja.nectar_cargado > 0:
-            distancia_rusc = self.distancia_manhattan(pos_abeja, estado.tablero.rusc_pos)
+            distancia_colmena = self.distancia_manhattan(pos_abeja, estado.tablero.pos_colmena)
             
-            # Mientras más lejos del rusc, peor (invertir distancia)
-            valor -= self.w7 * distancia_rusc * 2
+            # Mientras más lejos de la colmena, peor (invertir distancia)
+            valor -= self.w7 * distancia_colmena * 2
             
-            # Bonus si está en el rusc
-            if distancia_rusc == 0:
+            # Bonus si está en la colmena
+            if distancia_colmena == 0:
                 valor += 100
         
         # Si no tiene néctar o tiene espacio, valorar proximidad a flores
@@ -226,7 +226,7 @@ class Heuristica():
         return f"""Pesos de la Heurística:
   w1 (Flores vivas): {self.w1}
   w2 (Flores polinizadas): {self.w2}
-  w3 (Néctar en rusc): {self.w3}
+  w3 (Néctar en la colmena): {self.w3}
   w4 (Néctar cargado): {self.w4}
   w5 (Vida abeja): {self.w5}
   w6 (Energía abeja): {self.w6}

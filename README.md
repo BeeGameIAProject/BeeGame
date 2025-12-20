@@ -64,7 +64,7 @@ pip install pygame
 
 # 4. Ejecutar el juego
 cd BeeGame
-python gui_simple.py
+python gui.py
 ```
 
 ---

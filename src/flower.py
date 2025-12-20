@@ -56,14 +56,12 @@ class Flower():
             if self.vida > self.max_vida:
                 self.vida = self.max_vida
     
-    def to_string(self):
-        """Retorna una representación en string de la flor."""
-        estado = "Viva" if self.viva else "Muerta"
-        polin = "Polinizada" if self.polinizacion else "No polinizada"
-        return f"Flor: {estado}, Vida: {self.vida}/{self.max_vida}, {polin}, Pesticidas: {self.pesticidas}/3"
-    
-    
-    
+    # def to_string(self):
+    #     """Retorna una representación en string de la flor."""
+    #     estado = "Viva" if self.viva else "Muerta"
+    #     polin = "Polinizada" if self.polinizacion else "No polinizada"
+    #     return f"Flor: {estado}, Vida: {self.vida}/{self.max_vida}, {polin}, Pesticidas: {self.pesticidas}/3"
+
     def incrementar_turno_muerta(self):
         """Incrementa el contador de turnos muerta."""
         if not self.viva:

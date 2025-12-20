@@ -1,8 +1,4 @@
 import copy
-import random
-from .bee import Bee
-from .humanidad import Humanidad
-from .chance_events import ChanceEvents
 from .heuristica import Heuristica
 
 class GameState():
@@ -214,10 +210,10 @@ class ExpectimaxAI():
         if estado.abeja.energia < estado.abeja.max_energia:
             acciones.append(('descansar', None))
         
-        # Acción: Descargar néctar en rusc (si está en el rusc)
-        if estado.tablero.es_rusc(estado.pos_abeja[0], estado.pos_abeja[1]):
+        # Acción: Descargar néctar en la colmena (si está en la colmena)
+        if estado.tablero.es_colmena(estado.pos_abeja[0], estado.pos_abeja[1]):
             if estado.abeja.nectar_cargado > 0:
-                acciones.append(('descargar', estado.tablero.rusc_pos))
+                acciones.append(('descargar', estado.tablero.pos_colmena))
         
         return acciones
     
@@ -244,8 +240,8 @@ class ExpectimaxAI():
             nuevo_estado.abeja.descansar()
         
         elif tipo_accion == 'descargar':
-            nuevo_estado.abeja.descargar_nectar_en_rusc(nuevo_estado.tablero, objetivo)
-            nuevo_estado.abeja.recuperar_energia_en_rusc(nuevo_estado.tablero, objetivo)
+            nuevo_estado.abeja.descargar_nectar_en_colmena(nuevo_estado.tablero, objetivo)
+            nuevo_estado.abeja.recuperar_energia_en_colmena(nuevo_estado.tablero, objetivo)
         
         return nuevo_estado
     
@@ -272,7 +268,7 @@ class ExpectimaxAI():
             return True
         
         # Victoria: Néctar objetivo alcanzado (ejemplo: 100)
-        if estado.tablero.nectar_en_rusc >= 100:
+        if estado.tablero.nectar_en_colmena >= 100:
             return True
         
         return False

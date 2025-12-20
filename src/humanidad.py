@@ -10,11 +10,11 @@ class Humanidad():
         self.name = name
         self.player_name = player_name
         self.radio_pesticida = 2  # Radio de acción para pesticidas (cerca de la abeja)
-        self.radio_obstaculo = 3  # Radio de acción para obstáculos (cerca del rusc, EXCLUYENDO rusc)
+        self.radio_obstaculo = 3  # Radio de acción para obstáculos (cerca de la colmena, EXCLUYENDO la colmena)
         self.max_obstaculos = 4   # Máximo número de obstáculos permitidos en el tablero
     
-    def to_string(self):
-        return f"Agente: {self.player_name}, Icono: {self.name}"
+    # def to_string(self):
+    #     return f"Agente: {self.player_name}, Icono: {self.name}"
     
     def distancia_manhattan(self, pos1, pos2):
         """Calcula la distancia Manhattan entre dos posiciones."""
@@ -40,13 +40,13 @@ class Humanidad():
                 if distancia <= self.radio_pesticida:
                     acciones.append(('pesticida', pos))
         
-        # Obtener acciones de obstáculo (radio 3 del rusc, en casillas vacías, EXCLUYENDO la casilla del rusc)
-        rusc_pos = tablero.rusc_pos
+        # Obtener acciones de obstáculo (radio 3 de la colmena, en casillas vacías, EXCLUYENDO la casilla de la colmena)
+        pos_colmena = tablero.pos_colmena
         for i in range(tablero.filas):
             for j in range(tablero.columnas):
-                if tablero.get_celda(i, j) is None:  # Casilla vacía
-                    distancia = self.distancia_manhattan((i, j), rusc_pos)
-                    # Radio 3 pero EXCLUYENDO la casilla del rusc (distancia > 0)
+                if tablero.get_celda(i, j) is None and (i, j) != pos_abeja:  # Casilla vacía y verificamos que no sea la posición de la abeja
+                    distancia = self.distancia_manhattan((i, j), pos_colmena)
+                    # Radio 3 pero EXCLUYENDO la casilla de la colmena (distancia > 0)
                     if 0 < distancia <= self.radio_obstaculo:
                         acciones.append(('obstaculo', (i, j)))
         
@@ -92,12 +92,12 @@ class Humanidad():
         """
         fila, col = posicion
         
-        # Verificar que NO es la casilla del rusc
-        if (fila, col) == tablero.rusc_pos:
+        # Verificar que NO es la casilla de la colmena
+        if (fila, col) == tablero.pos_colmena:
             return False
         
-        # Verificar restricción de radio respecto al rusc (1 a 3, excluyendo 0)
-        distancia = self.distancia_manhattan(posicion, tablero.rusc_pos)
+        # Verificar restricción de radio respecto a la colmena (1 a 3, excluyendo 0)
+        distancia = self.distancia_manhattan(posicion, tablero.pos_colmena)
         if distancia == 0 or distancia > self.radio_obstaculo:
             return False
         
@@ -132,11 +132,5 @@ class Humanidad():
         else:
             return False
     
-    def printname(self):
-        print(self.name)
-
-
-if __name__ == "__main__":
-    h = Humanidad()
-    h.printname()
-    print(h.to_string())
+    # def printname(self):
+    #     print(self.name)

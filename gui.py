@@ -1,7 +1,8 @@
 """
-Interfaz Gráfica Mejorada (GUI) para el juego BeeGame
+Interfaz Gráfica (GUI) para el juego BeeGame
 MVP7: Implementación con Pygame - Visuals Overhaul
 """
+
 from statistics import mean
 import pygame
 import sys
@@ -17,7 +18,7 @@ from src.heuristica import Heuristica
 from src.game_manager import GameManager
 from src.flower import Flower
 
-# --- PALETA DE COLORES MEJORADA (Tonos Pastel y Naturales) ---
+# --- PALETA DE COLORES MEJORADA (tonos pastel y naturales) ---
 C_FONDO_PANEL = (245, 245, 247)
 C_TEXTO_PRINCIPAL = (50, 50, 50)
 C_TEXTO_SECUNDARIO = (100, 100, 100)
@@ -25,12 +26,12 @@ C_TEXTO_SECUNDARIO = (100, 100, 100)
 # Tablero
 C_CESPED_CLARO = (167, 217, 72)
 C_CESPED_OSCURO = (142, 204, 57)
-C_SELECCION = (100, 200, 255, 100) # Con Alpha
+C_SELECCION = (100, 200, 255, 100) # Con alpha
 C_TRANSITABLE = (255, 255, 255, 50)
 
 # Elementos
-C_RUSC_BASE = (219, 166, 23)
-C_RUSC_DETALLE = (166, 124, 0)
+C_COLMENA_BASE = (219, 166, 23)
+C_COLMENA_DETALLE = (166, 124, 0)
 C_OBSTACULO_BASE = (120, 120, 120)
 C_OBSTACULO_SOMBRA = (80, 80, 80)
 
@@ -55,7 +56,7 @@ C_BOTON_ACTIVO = (255, 255, 255)
 C_BOTON_HOVER = (230, 230, 230)
 C_BOTON_BORDE = (200, 200, 200)
 
-#QL
+# QL
 MAX_EPISODES_SAFETY = 1500
 MIN_EPISODES_WARMUP = 150
 CONVERGENCE_THRESHOLD = 0.0001
@@ -94,11 +95,11 @@ class BeeGameGUI:
             self.font_bold = pygame.font.Font(None, 22)
             self.font_small = pygame.font.Font(None, 18)
 
-        # Inicializar componentes del juego (Misma lógica que antes)
+        # Inicializar componentes del juego (misma lógica que antes)
         self.board = Board(filas, columnas)
         self.board.inicializar_tablero(num_flores=12, num_obstaculos=2)
         self.abeja = Bee(life=100)
-        self.pos_abeja = (self.board.rusc_pos[0] - 1, self.board.rusc_pos[1])
+        self.pos_abeja = (self.board.pos_colmena[0] - 1, self.board.pos_colmena[1])
         
         self.humanidad_agente = Humanidad()
         self.eventos_azar = ChanceEvents()
@@ -122,8 +123,8 @@ class BeeGameGUI:
         self.usar_expectimax = True  # Toggle para activar/desactivar IA
         self.usar_qlearning = not (self.usar_expectimax)
         self.q_agent = QLearningAgent(alpha=0.5, gamma=0.9, epsilon=0.3)
-        self.ultim_estat_q = None
-        self.ultima_accio_q = None
+        self.ultimo_estado_q = None
+        self.ultima_accion_q = None
         self.calculando_ia = False
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
@@ -164,7 +165,7 @@ class BeeGameGUI:
             'recoger': pygame.Rect(x_start, y_start, w, h),
             'descansar': pygame.Rect(x_start + w + gap, y_start, w, h),
             'a_star': pygame.Rect(x_start, y_start + h + gap, w, h),
-            'IA': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
+            'cambiar_IA': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
         }
 
     # --- FUNCIONES DE DIBUJO PROCEDIMENTAL ---
@@ -205,27 +206,27 @@ class BeeGameGUI:
         center_x = x + self.CELL_SIZE // 2
         center_y = y + self.CELL_SIZE // 2
         
-        # 1. Dibujar Rusc
-        if celda == 'RUSC':
-            self.dibujar_rusc(center_x, center_y)
+        # Dibujar colmena
+        if celda == 'COLMENA':
+            self.dibujar_colmena(center_x, center_y)
             
-        # 2. Dibujar Obstáculo
+        # Dibujar Obstáculo
         elif celda == 'OBSTACULO':
             self.dibujar_obstaculo(center_x, center_y)
             
-        # 3. Dibujar Flor
+        # Dibujar Flor
         elif self.board.es_flor(fila, col):
             flor = self.board.get_celda(fila, col)
             self.dibujar_flor(center_x, center_y, flor, (fila, col))
 
-        # 4. Dibujar Abeja (encima de todo)
+        # Dibujar Abeja (encima de todo)
         if (fila, col) == self.pos_abeja:
             self.dibujar_abeja(center_x, center_y)
 
-    def dibujar_rusc(self, cx, cy):
+    def dibujar_colmena(self, cx, cy):
         # Base hexagonal (simulada con polígono) o circular estilizada
         radio = self.CELL_SIZE // 2.5
-        pygame.draw.circle(self.screen, C_RUSC_BASE, (cx, cy), radio)
+        pygame.draw.circle(self.screen, C_COLMENA_BASE, (cx, cy), radio)
         
         # Capas/Anillos
         for i in range(3):
@@ -233,7 +234,7 @@ class BeeGameGUI:
             rect_w = radio * 1.5
             rect_h = 10
             r_rect = pygame.Rect(cx - rect_w//2, cy - 15 + offset, rect_w, rect_h)
-            pygame.draw.rect(self.screen, C_RUSC_DETALLE, r_rect, border_radius=5)
+            pygame.draw.rect(self.screen, C_COLMENA_DETALLE, r_rect, border_radius=5)
             
         # Entrada
         pygame.draw.circle(self.screen, (50, 30, 0), (cx, cy + 10), 8)
@@ -405,9 +406,9 @@ class BeeGameGUI:
         self.crear_barra_progreso(x, y, f"Mochila:({self.abeja.nectar_cargado} / {self.abeja.capacidad_nectar})", self.abeja.nectar_cargado, self.abeja.capacidad_nectar, C_NECTAR)
         
         y += 45
-        # Néctar Rusc (Objetivo)
-        act = self.board.nectar_en_rusc
-        txt = self.font_normal.render(f"Miel en Rusc: {act} ", True, C_TEXTO_PRINCIPAL)
+        # Néctar colmena (Objetivo)
+        act = self.board.nectar_en_colmena
+        txt = self.font_normal.render(f"Miel en la colmena: {act} ", True, C_TEXTO_PRINCIPAL)
         self.screen.blit(txt, (x, y))
         
         
@@ -731,10 +732,10 @@ class BeeGameGUI:
                     self.mensaje += f"  ¡Daño -{daño}! ¡Abeja desorientada!"
                     self.factor_random = 0.75
 
-                if self.board.es_rusc(fila, col):
+                if self.board.es_colmena(fila, col):
                     nectar_descargado = self.abeja.nectar_cargado
-                    self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
-                    self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
+                    self.abeja.descargar_nectar_en_colmena(self.board, self.pos_abeja)
+                    self.abeja.recuperar_energia_en_colmena(self.board, self.pos_abeja)
                     if nectar_descargado > 0:
                         self.mensaje = f"¡En casa! Energía y vida recuperadas. Miel descargada: {nectar_descargado}"
                     else:
@@ -776,7 +777,7 @@ class BeeGameGUI:
                     if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
                         self.mensaje = "Sin energía para recoger néctar."
                     elif not self.abeja.puede_cargar_nectar():
-                        self.mensaje = "Mochila llena. Ve al rusc a descargar."
+                        self.mensaje = "Mochila llena. Ve a la colmena a descargar."
                     else:
                         self.mensaje = "Flor muerta o sin néctar."
             else:
@@ -793,14 +794,14 @@ class BeeGameGUI:
     def accion_a_star(self):
         if self.game_over or self.moviendo_a_star: return
         if self.celda_seleccionada:
-            ruta = self.abeja.calcular_ruta_a_rusc(
+            ruta = self.abeja.calcular_ruta_a_colmena(
                 self.board,
                 self.pos_abeja,
                 factor_aleatorio=self.factor_random,
                 destino=self.celda_seleccionada
             )
         else:
-            ruta = self.abeja.calcular_ruta_a_rusc(
+            ruta = self.abeja.calcular_ruta_a_colmena(
                 self.board,
                 self.pos_abeja,
                 factor_aleatorio=self.factor_random
@@ -837,10 +838,10 @@ class BeeGameGUI:
             else:
                 self.moviendo_a_star = False
                 # Auto-descarga al llegar
-                if self.board.es_rusc(*self.pos_abeja):
+                if self.board.es_colmena(*self.pos_abeja):
                     nectar_desc = self.abeja.nectar_cargado
-                    self.abeja.descargar_nectar_en_rusc(self.board, self.pos_abeja)
-                    self.abeja.recuperar_energia_en_rusc(self.board, self.pos_abeja)
+                    self.abeja.descargar_nectar_en_colmena(self.board, self.pos_abeja)
+                    self.abeja.recuperar_energia_en_colmena(self.board, self.pos_abeja)
                     self.mensaje = f" A* completado. Miel descargada: {nectar_desc}. Vida y energía restauradas."
                 else:
                     self.mensaje = " A* completado. Llegada a destino."
@@ -1105,7 +1106,7 @@ class BeeGameGUI:
                                     if key == 'recoger': self.recoger_nectar()
                                     elif key == 'descansar': self.accion_descansar()
                                     elif key == 'a_star': self.accion_a_star()
-                                    elif key == 'IA': self.accion_ia()
+                                    elif key == 'cambiar_IA': self.accion_ia()
                                     if key != 'recoger':self.celda_seleccionada = None
                                     clicked_btn = True
                                     break

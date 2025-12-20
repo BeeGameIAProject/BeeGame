@@ -4,16 +4,16 @@ from .flower import Flower
 class Board():
     """
     Representa el tablero del juego con dimensiones N×N.
-    Contiene el rusc, flores, obstáculos y gestiona el estado del juego.
+    Contiene la colmena, flores, obstáculos y gestiona el estado del juego.
     """
     def __init__(self, filas=10, columnas=10):
         self.filas = filas
         self.columnas = columnas
         self.grid = [[None for _ in range(columnas)] for _ in range(filas)]
-        self.rusc_pos = None  # Posición de la colmena
+        self.pos_colmena = None  # Posición de la colmena
         self.flores = []  # Lista de flores en el tablero
         self.obstaculos = []  # Lista de posiciones con obstáculos
-        self.nectar_en_rusc = 0  # Néctar acumulado en la colmena
+        self.nectar_en_colmena = 0  # Néctar acumulado en la colmena
         self.turno = 0  # Contador de turnos
         
     def fila(self):
@@ -22,32 +22,41 @@ class Board():
     def columna(self):
         return self.columnas
     
-    def inicializar_tablero(self, num_flores=15, num_obstaculos=5, rusc_pos=None):
+    def inicializar_tablero(self, num_flores=15, num_obstaculos=5, pos_colmena=None):
         """
-        Inicializa el tablero con el rusc, flores y obstáculos.
+        Inicializa el tablero con la colmena, flores y obstáculos.
         
         Args:
             num_flores: Número de flores a colocar
             num_obstaculos: Número de obstáculos a colocar
-            rusc_pos: Posición del rusc (si None, se coloca en el centro)
+            pos_colmena: Posición de la colmena (si es None, se coloca en el centro)
         """
         # Limpiar tablero
         self.grid = [[None for _ in range(self.columnas)] for _ in range(self.filas)]
         self.flores = []
         self.obstaculos = []
         
-        # Colocar rusc (colmena)
-        if rusc_pos is None:
-            self.rusc_pos = (self.filas // 2, self.columnas // 2)
+        # Colocar colmena
+        if pos_colmena is None:
+            self.pos_colmena = (self.filas // 2, self.columnas // 2)
         else:
-            self.rusc_pos = rusc_pos
-        self.grid[self.rusc_pos[0]][self.rusc_pos[1]] = "RUSC"
+            self.pos_colmena = pos_colmena
+        self.grid[self.pos_colmena[0]][self.pos_colmena[1]] = "COLMENA"
         
         # Colocar flores
+
+        # Reservar posición inicial de la abeja (encima de la colmena)
+        pos_abeja_inicio = (self.pos_colmena[0] - 1, self.pos_colmena[1])
+
         flores_colocadas = 0
         while flores_colocadas < num_flores:
             fila = random.randint(0, self.filas - 1)
             col = random.randint(0, self.columnas - 1)
+
+            # Evitar colocar en la posición reservada para la abeja
+            if (fila, col) == pos_abeja_inicio:
+                continue
+
             if self.grid[fila][col] is None:
                 flor = Flower()
                 self.grid[fila][col] = flor
@@ -59,6 +68,11 @@ class Board():
         while obstaculos_colocados < num_obstaculos:
             fila = random.randint(0, self.filas - 1)
             col = random.randint(0, self.columnas - 1)
+            
+            # Evitar colocar en la posición reservada para la abeja
+            if (fila, col) == pos_abeja_inicio:
+                continue
+
             if self.grid[fila][col] is None:
                 self.grid[fila][col] = "OBSTACULO"
                 self.obstaculos.append((fila, col))
@@ -70,9 +84,9 @@ class Board():
             return self.grid[fila][col]
         return None
     
-    def es_rusc(self, fila, col):
-        """Verifica si la posición es el rusc."""
-        return (fila, col) == self.rusc_pos
+    def es_colmena(self, fila, col):
+        """Verifica si la posición es la colmena."""
+        return (fila, col) == self.pos_colmena
     
     def es_obstaculo(self, fila, col):
         """Verifica si la posición es un obstáculo."""
@@ -107,9 +121,9 @@ class Board():
             return True
         return False
     
-    def agregar_nectar_al_rusc(self, cantidad):
+    def agregar_nectar_a_la_colmena(self, cantidad):
         """Agrega néctar a la colmena."""
-        self.nectar_en_rusc += cantidad
+        self.nectar_en_colmena += cantidad
     
     def get_flores_vivas(self):
         """Retorna lista de flores vivas en el tablero."""
@@ -145,8 +159,8 @@ class Board():
             if item in self.flores:
                 self.flores.remove(item)
     
-    def mostrar_tablero(self):
-        """Imprime una representación visual del tablero."""
-        print("\n" + "="*50)
-        print(f"Turno: {self.turno} | Néctar en Rusc: {self.nectar_en_rusc}")
-        print("="*50 + "\n")
+    # def mostrar_tablero(self):
+    #     """Imprime una representación visual del tablero."""
+    #     print("\n" + "="*50)
+    #     print(f"Turno: {self.turno} | Néctar en la colmena: {self.nectar_en_colmena}")
+    #     print("="*50 + "\n")
