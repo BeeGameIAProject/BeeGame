@@ -1,4 +1,5 @@
 from . import board
+import random
 
 class Humanidad():
     """
@@ -49,7 +50,8 @@ class Humanidad():
                     # Radio 3 pero EXCLUYENDO la casilla de la colmena (distancia > 0)
                     if 0 < distancia <= self.radio_obstaculo:
                         acciones.append(('obstaculo', (i, j)))
-        
+
+        random.shuffle(acciones)  # Para que la IA no tenga preferencias por la primera acción si las demás son igual de buenas
         return acciones
     
     def aplicar_pesticida(self, tablero, posicion, pos_abeja):
