@@ -807,11 +807,20 @@ class BeeGameGUI:
                 factor_aleatorio=self.factor_random
             )
         if ruta and len(ruta) > 1:
-            self.moviendo_a_star = True
-            self.ruta_a_star = ruta
-            self.paso_a_star = 1
-            self.timer_a_star = 0
-            self.mensaje = f"Piloto automático A* activado ({len(ruta)-1} pasos)..."
+            # Calculamos el coste total de la ruta
+            coste_total = (len(ruta) - 1) * self.abeja.coste_movimiento
+
+            if self.abeja.energia < coste_total:
+                # Solo muestra mensaje, NO activa el movimiento
+                self.mensaje = f"A* ALERTA: Energía insuficiente ({self.abeja.energia}/{coste_total}) para llegar."
+            else:
+                # Si hay energía, activa el movimiento
+                self.moviendo_a_star = True
+                self.ruta_a_star = ruta
+                self.paso_a_star = 1
+                self.timer_a_star = 0
+
+                self.mensaje = f"Piloto automático A* activado ({len(ruta)-1} pasos)..."
         else:
             self.mensaje = "Ya estás en casa o no hay ruta disponible."
 
@@ -1040,7 +1049,7 @@ class BeeGameGUI:
                     if exito: nuevas += 1
             if nuevas: self.mensaje_evento_clima += f" (+{nuevas} Flores)"
 
-        # Check Fin
+        # Miramos si ha acabado la partida
         fin, res, msg = self.game_manager.verificar_condiciones_finalizacion(self.board, self.abeja)
         if fin:
             self.game_over = True
@@ -1048,6 +1057,7 @@ class BeeGameGUI:
             self.mensaje = msg
         else:
             self.turno_jugador = True
+
     def choose_action(self,state):
         accions = []
         if random.random() < epsilon:
@@ -1142,7 +1152,7 @@ class BeeGameGUI:
                 s.fill((0,0,0,180))
                 self.screen.blit(s, (0,0))
                 color_res = C_CESPED_CLARO if self.resultado == "VICTORIA" else C_VIDA
-                txt = self.font_title.render(self.resultado, True, color_res)
+                txt = self.font_title.render(self.mensaje, True, color_res)
                 self.screen.blit(txt, (self.WINDOW_WIDTH//2 - txt.get_width()//2, self.WINDOW_HEIGHT//2))
 
             pygame.display.flip()

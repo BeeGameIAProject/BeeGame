@@ -34,21 +34,21 @@ class GameManager():
         if self.verificar_victoria(tablero):
             self.juego_terminado = True
             self.resultado = 'VICTORIA'
-            self.mensaje_final = f" ¡VICTORIA! Has acumulado {tablero.nectar_en_colmena} de néctar en la colmena"
+            self.mensaje_final = f" ¡VICTORIA! Has llegado al objetivo de néctar" # Has acumulado {tablero.nectar_en_colmena} de néctar en la colmena
             return True, self.resultado, self.mensaje_final
         
         # Verificar derrota por muerte de abeja
         if self.verificar_derrota_abeja_muerta(abeja):
             self.juego_terminado = True
             self.resultado = 'DERROTA_ABEJA_MUERTA'
-            self.mensaje_final = "DERROTA: La abeja ha muerto"
+            self.mensaje_final = "¡DERROTA! La abeja ha muerto"
             return True, self.resultado, self.mensaje_final
         
         # Verificar derrota por extinción de flores
         if self.verificar_derrota_sin_flores(tablero):
             self.juego_terminado = True
             self.resultado = 'DERROTA_SIN_FLORES'
-            self.mensaje_final = "DERROTA: No quedan flores vivas en el tablero"
+            self.mensaje_final = "¡DERROTA! No quedan flores vivas en el tablero"
             return True, self.resultado, self.mensaje_final
         
         # Juego continúa
