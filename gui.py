@@ -719,8 +719,18 @@ class BeeGameGUI:
 
     def mover_abeja(self, destino):
         if self.game_over or not self.turno_jugador: return False
-        fila, col = destino
 
+        # Si la abeja intenta moverse a la misma posición/casilla donde está no queremos
+        # que gaste una acción del jugador, solo avisarle con un mensaje
+        if destino == self.pos_abeja:
+            self.mensaje = "¡Ya estás en esa posición! Elige otro movimiento."
+            return False
+
+        if not self.abeja.is_valid_move(self.board, self.pos_abeja, destino):
+            self.mensaje = "¡Demasiado lejos! Solo puedes moverte 1 casilla."
+            return False
+
+        fila, col = destino
         if self.board.es_transitable(fila, col):
             if self.abeja.mover(self.board, self.pos_abeja, destino):
                 # Chequeo pesticida
@@ -750,7 +760,7 @@ class BeeGameGUI:
                 self.finalizar_turno_jugador()
                 return True
             else:
-                self.mensaje = " ¡Sin energía suficiente para moverse!"
+                self.mensaje = " ¡No tienes energía suficiente para moverte!"
         else:
             self.mensaje = " Camino bloqueado por obstáculo."
         return False
@@ -778,7 +788,7 @@ class BeeGameGUI:
                     self.finalizar_turno_jugador()
                 else:
                     if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
-                        self.mensaje = "Sin energía para recoger néctar."
+                        self.mensaje = "¡No tienes energía suficiente para recoger néctar!"
                     elif not self.abeja.puede_cargar_nectar():
                         self.mensaje = "Mochila llena. Ve a la colmena a descargar."
                     else:
