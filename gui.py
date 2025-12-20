@@ -1090,8 +1090,7 @@ class BeeGameGUI:
             return random.choice(accions)
         else:
             return max(self.q_table[state], key=self.q_table[state].get)
-    def step(self, state, action):
-        return None
+
     def update_q_table(self, state, action, reward, next_state):
         old_val = self.q_table[state][action]
         future_max = max(self.q_table[next_state].values())
@@ -1101,6 +1100,7 @@ class BeeGameGUI:
 
         self.q_table[state][action] = new_val
         return abs(new_val - old_val)
+
     def actualizar_evento_climatico(self):
         if self.mostrar_evento_clima:
             self.timer_evento_clima += 1

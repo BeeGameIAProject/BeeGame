@@ -102,6 +102,11 @@ class Board():
         if not (0 <= fila < self.filas and 0 <= col < self.columnas):
             return False
         celda = self.get_celda(fila, col)
+
+        # IMPORTANTE: si es una flor (viva o muerta), SIEMPRE es transitable
+        if isinstance(celda, Flower):
+            return True
+
         # Las flores siempre son transitables, solo los obstáculos no lo son
         return celda != "OBSTACULO"
     
