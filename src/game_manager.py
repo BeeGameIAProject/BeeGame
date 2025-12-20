@@ -50,6 +50,13 @@ class GameManager():
             self.resultado = 'DERROTA_SIN_FLORES'
             self.mensaje_final = "¡DERROTA! No quedan flores vivas en el tablero"
             return True, self.resultado, self.mensaje_final
+
+        # Verificar derrota por falta de energía
+        if abeja.energia <= 0:
+            self.juego_terminado = True
+            self.resultado = 'DERROTA_SIN_ENERGIA'
+            self.mensaje_final = "¡DERROTA! La abeja se ha quedado sin energía"
+            return True, self.resultado, self.mensaje_final
         
         # Juego continúa
         return False, None, ""
