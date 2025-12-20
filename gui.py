@@ -115,6 +115,7 @@ class BeeGameGUI:
         self.resultado = None
         self.celda_seleccionada = None
         self.turno_jugador = True
+        self.ultima_flor_recolectada = None
 
         # Control de flores muertas { (f, c): turno_muerte }
         self.flores_muertas_timer = {}
@@ -726,6 +727,7 @@ class BeeGameGUI:
             self.mensaje = "¡Ya estás en esa posición! Elige otro movimiento."
             return False
 
+        # Si la abeja intenta moverse a una posición/casilla que no llega mostramos el mensaje correspondiente
         if not self.abeja.is_valid_move(self.board, self.pos_abeja, destino):
             self.mensaje = "¡Demasiado lejos! Solo puedes moverte 1 casilla."
             return False
@@ -733,6 +735,10 @@ class BeeGameGUI:
         fila, col = destino
         if self.board.es_transitable(fila, col):
             if self.abeja.mover(self.board, self.pos_abeja, destino):
+                # Reseteamos la ultima flor recolectada, como está moviendose ya no está abusando de una flor
+                # (recolectar nectar sin parar hasta que la flor muera o tenga el inventario lleno)
+                self.ultima_flor_recolectada = None
+
                 # Chequeo pesticida
                 celda = self.board.get_celda(fila, col)
                 daño = 0
@@ -771,10 +777,17 @@ class BeeGameGUI:
             return
 
         f, c = self.celda_seleccionada
+
+        # Comprobamos que no esté abusando de esa flor (recogiendo nectar sin parar)
+        if (f, c) == self.ultima_flor_recolectada:
+            self.mensaje = "Ya has recolectado aquí. Muévete para recolectar de nuevo."
+            return
+
         # Check adyacencia
         if abs(self.pos_abeja[0]-f) <= 1 and abs(self.pos_abeja[1]-c) <= 1:
             if self.board.es_flor(f, c):
                 if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
+                    self.ultima_flor_recolectada = (f, c)
                     self.mensaje = f"¡Néctar +10! Flor polinizada en ({f},{c})"
                     # Chequeo pesticida
                     celda = self.board.get_celda(f, c)
