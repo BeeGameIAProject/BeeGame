@@ -154,7 +154,6 @@ class BeeGameGUI:
 
         self.clock = pygame.time.Clock()
 
-
     def crear_botones(self):
         x_start = self.BOARD_WIDTH + 25
         y_start = self.WINDOW_HEIGHT - 140
@@ -162,11 +161,19 @@ class BeeGameGUI:
         h = 50
         gap = 20
 
+        # --- NUEVO CÓDIGO ---
+        # Botón Reiniciar (debajo de instrucciones)
+        btn_w, btn_h = 140, 40
+        btn_x = (self.BOARD_WIDTH // 2) - (btn_w // 2)
+        btn_y = self.BOARD_HEIGHT + 50
+        # --------------------
+
         return {
             'recoger': pygame.Rect(x_start, y_start, w, h),
             'descansar': pygame.Rect(x_start + w + gap, y_start, w, h),
-            'a_star': pygame.Rect(x_start, y_start + h + gap, w, h),
+            'ir_a_la_colmena': pygame.Rect(x_start, y_start + h + gap, w, h),
             'cambiar_IA': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
+            'reiniciar': pygame.Rect(btn_x, btn_y, btn_w, btn_h)  # <--- AÑADIR ESTA LÍNEA
         }
 
     # --- FUNCIONES DE DIBUJO PROCEDIMENTAL ---
@@ -650,7 +657,11 @@ class BeeGameGUI:
         activo_global = self.turno_jugador and not self.game_over
 
         for key, rect in self.botones.items():
-            hover = rect.collidepoint(mouse_pos) and activo_global
+            # Botón de reinicio siempre activo
+            es_reinicio = (key == 'reiniciar')
+            activo = activo_global or es_reinicio
+
+            hover = rect.collidepoint(mouse_pos) and activo
 
             # Colores
             if not activo_global:
@@ -1100,6 +1111,38 @@ class BeeGameGUI:
             if self.timer_evento_clima > self.duracion_evento_clima:
                 self.mostrar_evento_clima = False
 
+    def reiniciar_juego(self):
+        # Guardamos el objetivo actual
+        objetivo = self.game_manager.nectar_objetivo
+
+        # Reiniciar componentes
+        self.board = Board(self.board.filas, self.board.columnas)
+        self.board.inicializar_tablero(num_flores=12, num_obstaculos=2)
+        self.abeja = Bee(life=100)
+        self.pos_abeja = (self.board.pos_colmena[0] - 1, self.board.pos_colmena[1])
+
+        self.humanidad_agente = Humanidad()
+        self.eventos_azar = ChanceEvents()
+        self.game_manager = GameManager(nectar_objetivo=objetivo)
+
+        # Reiniciar variables de control
+        self.turno = 0
+        self.mensaje = "Juego reiniciado."
+        self.clima_actual = "Normal"
+        self.game_over = False
+        self.resultado = None
+        self.celda_seleccionada = None
+        self.turno_jugador = True
+
+        self.flores_muertas_timer = {}
+        self.moviendo_a_star = False
+        self.ruta_a_star = []
+
+        # Reiniciar stats
+        self.nodos_explorados = 0
+        self.tiempo_calculo_ia = 0
+        self.ia_error = [0]
+
     def run(self):
         running = True
         while running:
@@ -1126,15 +1169,21 @@ class BeeGameGUI:
                             self.mostrar_tooltip_clima = False
                             continue
 
-                        # Check botones
+                        # Check boton de reinicio
                         clicked_btn = False
+                        if 'reiniciar' in self.botones and self.botones['reiniciar'].collidepoint(pos):
+                            self.reiniciar_juego()
+                            clicked_btn = True
+
+                        # Check el resto de botones
                         if self.turno_jugador and not self.game_over:
                             for key, rect in self.botones.items():
+                                if key == 'reiniciar': continue  # Ya revisado
                                 if rect.collidepoint(pos):
 
                                     if key == 'recoger': self.recoger_nectar()
                                     elif key == 'descansar': self.accion_descansar()
-                                    elif key == 'a_star': self.accion_volver_colmena_a_star()
+                                    elif key == 'ir_a_la_colmena': self.accion_volver_colmena_a_star()
                                     elif key == 'cambiar_IA': self.accion_ia()
                                     if key != 'recoger':self.celda_seleccionada = None
                                     clicked_btn = True
