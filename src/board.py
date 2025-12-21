@@ -101,13 +101,18 @@ class Board():
         """Verifica si la posición es transitable (no obstáculo)."""
         if not (0 <= fila < self.filas and 0 <= col < self.columnas):
             return False
+
         celda = self.get_celda(fila, col)
 
-        # IMPORTANTE: si es una flor (viva o muerta), SIEMPRE es transitable
+        # IMPORTANTE: Si es una Flor (viva o muerta), SIEMPRE se puede pasar
         if isinstance(celda, Flower):
             return True
 
-        # Las flores siempre son transitables, solo los obstáculos no lo son
+        # Si está vacío (None), también se puede pasar
+        if celda is None:
+            return True
+
+        # Solo bloqueamos si es explícitamente un "OBSTACULO"
         return celda != "OBSTACULO"
     
     def colocar_obstaculo(self, fila, col):

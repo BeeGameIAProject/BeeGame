@@ -17,9 +17,9 @@ class Humanidad():
     # def to_string(self):
     #     return f"Agente: {self.player_name}, Icono: {self.name}"
     
-    def distancia_manhattan(self, pos1, pos2):
-        """Calcula la distancia Manhattan entre dos posiciones."""
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+    def distancia_chebyshev(self, pos1, pos2):
+        """Calcula la distancia Chebyshev entre dos posiciones."""
+        return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
     
     def obtener_acciones_validas(self, tablero, pos_abeja):
         """
@@ -37,7 +37,7 @@ class Humanidad():
         # Obtener acciones de pesticida (radio 2 de la abeja, solo en flores)
         for pos, flor in tablero.flores:
             if flor.esta_viva():
-                distancia = self.distancia_manhattan(pos, pos_abeja)
+                distancia = self.distancia_chebyshev(pos, pos_abeja)
                 if distancia <= self.radio_pesticida:
                     acciones.append(('pesticida', pos))
         
@@ -46,7 +46,7 @@ class Humanidad():
         for i in range(tablero.filas):
             for j in range(tablero.columnas):
                 if tablero.get_celda(i, j) is None and (i, j) != pos_abeja:  # Casilla vacía y verificamos que no sea la posición de la abeja
-                    distancia = self.distancia_manhattan((i, j), pos_colmena)
+                    distancia = self.distancia_chebyshev((i, j), pos_colmena)
                     # Radio 3 pero EXCLUYENDO la casilla de la colmena (distancia > 0)
                     if 0 < distancia <= self.radio_obstaculo:
                         acciones.append(('obstaculo', (i, j)))
@@ -73,7 +73,7 @@ class Humanidad():
             return False
         
         # Verificar restricción de radio
-        distancia = self.distancia_manhattan(posicion, pos_abeja)
+        distancia = self.distancia_chebyshev(posicion, pos_abeja)
         if distancia > self.radio_pesticida:
             return False
         
@@ -99,7 +99,7 @@ class Humanidad():
             return False
         
         # Verificar restricción de radio respecto a la colmena (1 a 3, excluyendo 0)
-        distancia = self.distancia_manhattan(posicion, tablero.pos_colmena)
+        distancia = self.distancia_chebyshev(posicion, tablero.pos_colmena)
         if distancia == 0 or distancia > self.radio_obstaculo:
             return False
         

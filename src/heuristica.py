@@ -187,7 +187,7 @@ class Heuristica():
         
         # Si tiene néctar cargado, priorizar estar cerca de la colmena
         if estado.abeja.nectar_cargado > 0:
-            distancia_colmena = self.distancia_manhattan(pos_abeja, estado.tablero.pos_colmena)
+            distancia_colmena = self.distancia_chebyshev(pos_abeja, estado.tablero.pos_colmena)
             
             # Mientras más lejos de la colmena, peor (invertir distancia)
             valor -= self.w7 * distancia_colmena * 2
@@ -204,7 +204,7 @@ class Heuristica():
             if flores_vivas:
                 distancia_min = float('inf')
                 for pos_flor, flor in flores_vivas:
-                    dist = self.distancia_manhattan(pos_abeja, pos_flor)
+                    dist = self.distancia_chebyshev(pos_abeja, pos_flor)
                     if dist < distancia_min:
                         distancia_min = dist
                 
@@ -217,9 +217,9 @@ class Heuristica():
         
         return valor
     
-    def distancia_manhattan(self, pos1, pos2):
-        """Calcula la distancia Manhattan entre dos posiciones."""
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+    def distancia_chebyshev(self, pos1, pos2):
+        """Calcula la distancia Chebyshev entre dos posiciones."""
+        return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
     
     def to_string(self):
         """Retorna una representación de los pesos configurados."""

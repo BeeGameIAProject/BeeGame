@@ -799,6 +799,7 @@ class BeeGameGUI:
 
                     if daño > 0: self.mensaje += f"  ¡Daño -{daño}!"
                     self.finalizar_turno_jugador()
+                    self.celda_seleccionada = None  # Para que al hacer A Star no se detenga la abeja en esa casilla
                 else:
                     if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
                         self.mensaje = "¡No tienes energía suficiente para recoger néctar!"
@@ -817,21 +818,13 @@ class BeeGameGUI:
         self.mensaje = "Descansando... Energía +20"
         self.finalizar_turno_jugador()
 
-    def accion_a_star(self):
+    def accion_volver_colmena_a_star(self):
         if self.game_over or self.moviendo_a_star: return
-        if self.celda_seleccionada:
-            ruta = self.abeja.calcular_ruta_a_colmena(
-                self.board,
-                self.pos_abeja,
-                factor_aleatorio=self.factor_random,
-                destino=self.celda_seleccionada
-            )
-        else:
-            ruta = self.abeja.calcular_ruta_a_colmena(
-                self.board,
-                self.pos_abeja,
-                factor_aleatorio=self.factor_random
-            )
+        ruta = self.abeja.calcular_ruta_a_colmena(
+            self.board,
+            self.pos_abeja,
+            factor_aleatorio=self.factor_random
+        )
         if ruta and len(ruta) > 1:
             # Calculamos el coste total de la ruta
             coste_total = (len(ruta) - 1) * self.abeja.coste_movimiento
@@ -950,13 +943,13 @@ class BeeGameGUI:
             self.nodos_explorados = self.ai.nodes_explored
             # --- CÁLCULO DEL ERROR USANDO MÉTODO DE HUMANIDAD ---
             # A) Distancia entre NUEVO PESTICIDA y ABEJA
-            dist_pesticida_abeja = self.humanidad_agente.distancia_manhattan(pos, self.pos_abeja)
+            dist_pesticida_abeja = self.humanidad_agente.distancia_chebyshev(pos, self.pos_abeja)
 
             # B) Distancia entre ABEJA y FLOR MÁS CERCANA (VIVA)
             flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
             dist_flor_cercana = 0
             if flores_vivas:
-                distancias = [self.humanidad_agente.distancia_manhattan(p, self.pos_abeja) for p in flores_vivas]
+                distancias = [self.humanidad_agente.distancia_chebyshev(p, self.pos_abeja) for p in flores_vivas]
                 dist_flor_cercana = min(distancias)
 
             # C) El Error es la diferencia
@@ -1016,13 +1009,13 @@ class BeeGameGUI:
             self.nodos_explorados = self.ai.nodes_explored
             # --- CÁLCULO DEL ERROR USANDO MÉTODO DE HUMANIDAD ---
             # A) Distancia entre NUEVO PESTICIDA y ABEJA
-            dist_pesticida_abeja = self.humanidad_agente.distancia_manhattan(pos, self.pos_abeja)
+            dist_pesticida_abeja = self.humanidad_agente.distancia_chebyshev(pos, self.pos_abeja)
 
             # B) Distancia entre ABEJA y FLOR MÁS CERCANA (VIVA)
             flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
             dist_flor_cercana = 0
             if flores_vivas:
-                distancias = [self.humanidad_agente.distancia_manhattan(p, self.pos_abeja) for p in flores_vivas]
+                distancias = [self.humanidad_agente.distancia_chebyshev(p, self.pos_abeja) for p in flores_vivas]
                 dist_flor_cercana = min(distancias)
 
             # C) El Error es la diferencia
@@ -1141,7 +1134,7 @@ class BeeGameGUI:
 
                                     if key == 'recoger': self.recoger_nectar()
                                     elif key == 'descansar': self.accion_descansar()
-                                    elif key == 'a_star': self.accion_a_star()
+                                    elif key == 'a_star': self.accion_volver_colmena_a_star()
                                     elif key == 'cambiar_IA': self.accion_ia()
                                     if key != 'recoger':self.celda_seleccionada = None
                                     clicked_btn = True
@@ -1155,7 +1148,11 @@ class BeeGameGUI:
 
                     elif event.button == 3: # Right Click
                         celda = self.obtener_celda_click(pos)
-                        if celda: self.celda_seleccionada = celda
+
+                        # Solo permitimos seleccionar si es una flor y está viva
+                        f, c = celda
+                        if celda and self.board.es_flor(f, c) and self.board.get_celda(f, c).vida > 0:
+                            self.celda_seleccionada = celda
 
             # Updates
             if self.moviendo_a_star: self.actualizar_a_star()

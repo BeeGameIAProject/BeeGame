@@ -184,8 +184,8 @@ class Bee():
         Retorna una lista de posiciones desde inicio hasta objetivo.
         """
         def heuristica(pos1, pos2):
-            # Distancia Manhattan
-            return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+            # Distancia Chebyshev (porque la abeja se puede mover en 8 direcciones)
+            return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
         
         # Cola de prioridad: (f, g, posicion, camino)
         open_set = []
