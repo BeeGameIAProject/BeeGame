@@ -1,156 +1,97 @@
-# 🐝 BeeGame - Simulación Ecológica con IA
+# BeeGame Simulator
 
-![Python](https://img.shields.io/badge/Python-3.12.3-blue.svg)
-![Pygame](https://img.shields.io/badge/Pygame-2.6.0-green.svg)
-![Status](https://img.shields.io/badge/Status-En_Proceso-yellow.svg)
+Este repositorio contiene el código fuente de **BeeGame**, un proyecto de simulación desarrollado en Python mediante la librería `pygame`. El sistema modela un ecosistema simplificado donde un agente inteligente (una abeja) debe optimizar la recolección de recursos mientras gestiona su supervivencia frente a un agente antagonista (la humanidad) y factores estocásticos ambientales.
 
----
+El objetivo principal de este trabajo es la implementación, análisis y comparación de algoritmos de Búsqueda Adversaria y Aprendizaje por Refuerzo en un entorno de cuadrícula (tablero $NxN$).
 
-## ¿Qué es BeeGame?
+## Descripción del Proyecto
 
-**BeeGame** es un juego de estrategia por turnos donde controlas una abeja que debe sobrevivir y recolectar néctar en un entorno hostil. El proyecto implementa algoritmos de **Inteligencia Artificial** avanzados como **Expectimax**, **A\*** y funciones heurísticas para crear una experiencia de juego desafiante.
+El simulador plantea un problema de toma de decisiones en un entorno dinámico e incierto. Los componentes principales son:
 
-### Objetivo Educativo
+* **Agente (MAX):** La Abeja. Su función de utilidad se maximiza al recolectar néctar, polinizar flores y depositar el recurso en la colmena, manteniendo niveles óptimos de energía y salud.
+* **Adversario (MIN):** La Humanidad. Actúa como un agente hostil que intenta minimizar la utilidad de la abeja mediante la colocación estratégica de obstáculos y la aplicación de pesticidas.
+* **Entorno Estocástico (CHANCE):** Eventos climáticos (Lluvia, Sol, Normal) que ocurren con una frecuencia determinada y afectan las propiedades del entorno, como la toxicidad de las flores o su tasa de reproducción.
 
-Este proyecto busca **concienciar sobre la importancia de las abejas y el medio ambiente** a través de una experiencia interactiva. Al jugar, experimentas los desafíos reales que enfrentan las abejas en ecosistemas afectados por pesticidas y la actividad humana. El juego demuestra cómo:
+## Instalación y Ejecución
 
-- Las abejas son **esenciales para la polinización** y el equilibrio ecológico
-- Los **pesticidas** representan una amenaza grave para su supervivencia
-- La **desaparición de flores** afecta directamente la cadena alimentaria
-- Los **obstáculos ambientales** dificultan su labor polinizadora
+### Requisitos
+* Python.
+* Librería `pygame`.
 
-A través de la mecánica del juego, se evidencia la lucha constante de estos insectos por sobrevivir mientras cumplen su función vital en la naturaleza.
+### Pasos para ejecutar
+1.  Clona este repositorio en tu máquina local:
+    ```bash
+    git clone https://github.com/BeeGameIAProject/BeeGame.git
+    cd BeeGame
+    ```
 
----
+2.  Instala las dependencias necesarias:
+    ```bash
+    pip install pygame
+    ```
 
-## Cómo Funciona
+3.  Inicia la simulación:
+    ```bash
+    python main.py
+    ```
 
-### El Tablero
-- Cuadrícula de **10×10 casillas** (configurable)
-- Elementos: Rusc (colmena), Flores, Obstáculos, Abeja
+## Algoritmos Implementados
 
-### La Abeja (Tú)
-- **Vida**: 100 puntos
-- **Energía**: 100 puntos (gasta 2 por movimiento)
-- **Néctar**: Capacidad de 50 unidades
-- **Objetivo**: Acumular unidades de néctar en el rusc
+El núcleo del proyecto se basa en la comparación de dos enfoques distintos para la toma de decisiones del agente antagonista, mientras el agente protagonista utiliza búsqueda heurística y pathfinding.
 
-### La Humanidad (IA)
-- Intenta impedir que ganes usando:
-  - **Pesticidas**: Matan flores (mueren al acumular 3)
-  - **Obstáculos**: Bloquean tu paso
+### 1. Expectimax (Búsqueda Adversaria con Incertidumbre)
+Algoritmo utilizado para planificar movimientos considerando la naturaleza no determinista del clima.
+* **Profundidad:** Configurable (por defecto 2 niveles).
+* **Modelado:** Árbol de búsqueda con nodos MAX (Abeja), MIN (Humanidad) y CHANCE (Clima).
+* **Heurística:** Evalúa la utilidad de los estados hoja basándose en factores ponderados como salud, energía, néctar recolectado, distancia a objetivos y proximidad de amenazas.
 
-### Eventos Aleatorios
-Cada 4 (aproximadamente) turnos ocurre un evento climático:
-- **Lluvia (10%)**: Limpia pesticidas de las flores
-- **Sol (15%)**: Aumenta reproducción de flores
-- **Normal (75%)**: Sin efectos
+### 2. Q-Learning (Aprendizaje por Refuerzo)
+Implementación de un agente que aprende una política de comportamiento óptima a través de la interacción directa con el entorno (ensayo y error).
+* **Espacio de Estados:** Discretizado en una tupla `(Cuadrante, Nivel de Flores, Estado de Energía)` para reducir la dimensionalidad y acelerar la convergencia.
+* **Sistema de Recompensas:** Otorga refuerzos positivos (+10/+5) por acciones ofensivas efectivas a corta distancia y penalizaciones (-1) por acciones irrelevantes.
+* **Política:** Epsilon-Greedy, balanceando la exploración de nuevas acciones con la explotación del conocimiento adquirido.
 
----
+### 3. A* (Pathfinding)
+Utilizado por el agente abeja para la navegación espacial eficiente hacia la colmena. Incorpora un factor de ruido aleatorio en la función de coste para simular un comportamiento orgánico y no perfectamente determinista.
 
-## Instalación
+## Métricas y Evaluación
 
-```bash
-# 1. Clonar o descargar el proyecto
-cd BeeGame
+La interfaz gráfica incluye un panel de métricas en tiempo real para evaluar el desempeño de los algoritmos:
 
-# 2. Crear entorno virtual (opcional pero recomendado)
-python -m venv .venv
-.venv\Scripts\activate  # En Windows
-source .venv/bin/activate  # En Linux/Mac
+* **T (Tiempo):** Coste computacional de cada decisión en segundos. Permite analizar la latencia introducida por la profundidad del árbol de búsqueda frente a la inmediatez de la tabla Q.
+* **Nodos:** Cantidad de estados explorados por turno. Esta métrica es exclusiva para Expectimax e indica la complejidad del árbol de decisión en ese instante.
+* **Err (Error / Divergencia):** Una métrica adaptativa según el algoritmo activo:
+    * **En Q-Learning (TD-Error):** Representa el Error de Diferencia Temporal. Mide la discrepancia entre la recompensa esperada y la realmente obtenida. Un valor decreciente hacia cero indica que el agente está aprendiendo y sus predicciones se alinean con la realidad.
+    * **En Expectimax (Volatilidad):** Calculada como la diferencia absoluta entre la evaluación heurística estática del estado actual y la evaluación profunda tras la búsqueda. Un valor alto indica que la búsqueda profunda ha revelado información táctica (amenazas u oportunidades) que la evaluación superficial ignoraba.
 
-# 3. Instalar Pygame
-pip install pygame
+## Estructura del Código
 
-# 4. Ejecutar el juego
-cd BeeGame
-python gui.py
-```
+El proyecto sigue una arquitectura modular donde la lógica está desacoplada de la vista:
 
----
+* `main.py`: Punto de entrada de la aplicación.
+* `gui.py`: Gestión de la interfaz gráfica, bucle principal y renderizado (Vista/Controlador).
+* `board.py` & `flower.py`: Lógica del tablero, gestión de la cuadrícula y entidades (Modelo).
+* `bee.py`: Lógica del agente protagonista y navegación A*.
+* `humanidad.py`: Lógica y acciones disponibles para el agente antagonista.
+* `expectimax.py` & `heuristica.py`: Motor de decisión basado en árbol de búsqueda.
+* `qlearning.py`: Motor de aprendizaje por refuerzo tabular.
+* `chance_events.py`: Gestión de probabilidades climáticas y reproducción.
+* `game_manager.py`: Definición de reglas de finalización (victoria/derrota).
 
-## Cómo Jugar
+## Controles
 
-### Configuración Inicial
-Al iniciar el juego, elige:
-- Tamaño del tablero
-- Número de flores
-- Modo de juego:
-  - **Jugador**: Tú controlas la abeja
-  - **IA Básica**: La humanidad juega aleatoriamente
-  - **Expectimax**: Ambos usan IA avanzada
+* **Clic Izquierdo:** Mover manualmente a la abeja (durante el turno del jugador).
+* **Clic Derecho:** Inspeccionar el estado detallado de una flor.
+* **Botón "Recoger":** Recolectar néctar y polinizar.
+* **Botón "Descansar":** Recuperar energía.
+* **Botón "Ir a la colmena":** Activa el piloto automático A*.
+* **Botón "Cambiar IA":** Alterna en tiempo real el algoritmo que controla a la Humanidad (Expectimax vs Q-Learning).
 
-### Controles
+## Autores
 
-| Acción | Cómo hacerlo                                                              |
-|--------|---------------------------------------------------------------------------|
-| **Mover** | Click en casilla adyacente                                                |
-| **Polinizar** | Botón "Recoger"                                                           |
-| **Descansar** | Botón "Descansar" (recupera 10 energía)                                   |
-| **Volver al Rusc** | Botón "A Star" (usa A* para buscar una ruta óptima y volver a la colmena) |
+Proyecto realizado para la asignatura de **Inteligencia Artificial** - Universitat de Barcelona
 
-
-### Ganar y Perder
-
-| Resultado | Condición |
-|-----------|-----------|
-| **DERROTA** | Tu vida llega a 0 |
-| **DERROTA** | No quedan flores vivas en el tablero |
-
----
-
-## Tecnología Utilizada
-
-### Algoritmos de IA
-- **Expectimax**: Toma decisiones óptimas considerando probabilidades
-- **A\* (A-Star)**: Calcula la ruta más corta al rusc evitando obstáculos
-- **Función Heurística**: Evalúa qué tan bueno es un estado del juego
-
-### Mecánicas Inteligentes
-- La IA solo puede poner pesticidas cerca de la abeja (radio 2)
-- Los obstáculos solo se pueden colocar cerca del rusc (radio 3)
-- Máximo 4 obstáculos a la vez (se elimina el más antiguo)
-
----
-
-## Estructura del Proyecto
-
-```
-BeeGame/
-├── bee.py                 # Lógica de la abeja (movimiento, A*)
-├── board.py               # Tablero del juego
-├── chance_events.py       # Eventos climáticos aleatorios
-├── expectimax.py          # Algoritmo de IA principal
-├── flower.py              # Lógica de las flores
-├── gui_simple.py          # Interfaz gráfica (EJECUTAR ESTE)
-├── heuristica.py          # Evaluación de estados
-├── humanidad.py           # Lógica de la humanidad (IA enemiga)
-└── README.md              # Este archivo
-```
-
----
-
-## ¿Qué Aprenderás?
-
-Este proyecto demuestra:
-- Algoritmos de búsqueda informada (A*)
-- Teoría de juegos (Expectimax con nodos de azar)
-- Modelado de incertidumbre
-- Funciones heurísticas multi-componente
-- Desarrollo de juegos con Pygame
-
----
-
-## Ayuda
-
-¿Problemas para ejecutar el juego?
-
-1. Asegúrate de tener Python 3.12+ instalado
-2. Instala Pygame: `pip install pygame`
-3. Ejecuta desde la carpeta BeeGame: `python gui_simple.py`
-
----
-
-<div align="center">
-
-</div>
+* **Emma Loberas Carlosena**
+* **Jose Candon Rubio**
+* **Daniel Barceló Monclus**
+* **Pau González Lopez**

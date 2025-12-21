@@ -34,7 +34,7 @@
 - [x] **Acciones**:
     - [x] Aplicar pesticidas (daña flores).
     - [x] Colocar obstáculos (bloquea paso).
-        - [ ] Revisar los limites para colocar los obstaculos (cerca del Rusc o la abeja no puede).
+    - [x] Revisar los limites para colocar los obstaculos (cerca del Rusc o la abeja no puede).
 - [x] **Restricciones de Acción (Poda Estratégica)**:
     - [x] Limitar aplicación de pesticidas a un radio de 2 casillas de la abeja.
     - [x] Limitar colocación de obstáculos a un radio de 2 casillas del rusc.
@@ -51,7 +51,7 @@
     - [x] Ejecutar tras polinización exitosa.
     - [x] Calcular nacimiento de nueva flor basado en probabilidad base (20%) + bonificación climática si aplica.
 
-## 4. Algoritmo de IA (Core)
+## 4. Algoritmo de IA 
 - [x] **Implementación Expectimax**:
     - [x] Crear función recursiva `expectimax(estado, profundidad, agente)`.
     - [x] Gestionar nodos MAX (Abeja): Seleccionar mejor valor.

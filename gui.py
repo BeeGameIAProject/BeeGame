@@ -1,13 +1,14 @@
 """
-Interfaz Gráfica (GUI) para el juego BeeGame
-MVP7: Implementación con Pygame
+Interfaz Gráfica (GUI) para el juego BeeGame.
+Orquesta la interacción entre el usuario, el renderizado y los agentes.
 """
 
-from statistics import mean
-import pygame
 import sys
 import math
-import random
+import time
+from statistics import mean
+import pygame
+
 from src.qlearning import QLearningAI
 from src.board import Board
 from src.bee import Bee
@@ -17,95 +18,112 @@ from src.expectimax import ExpectimaxAI, GameState
 from src.heuristica import Heuristica
 from src.game_manager import GameManager
 
-# Paleta de colores
+# === CONFIGURACIÓN Y CONSTANTES VISUALES ===
+
+# Colores UI
 C_FONDO_PANEL = (245, 245, 247)
 C_TEXTO_PRINCIPAL = (50, 50, 50)
 C_TEXTO_SECUNDARIO = (100, 100, 100)
 
-# Tablero
+# Colores Tablero
 C_CESPED_CLARO = (167, 217, 72)
 C_CESPED_OSCURO = (142, 204, 57)
-C_SELECCION = (100, 200, 255, 100) # Con alpha
+C_SELECCION = (100, 200, 255, 100)
 C_TRANSITABLE = (255, 255, 255, 50)
 
-# Elementos
+# Colores Entidades
 C_COLMENA_BASE = (219, 166, 23)
 C_COLMENA_DETALLE = (166, 124, 0)
 C_OBSTACULO_BASE = (120, 120, 120)
-C_OBSTACULO_SOMBRA = (80, 80, 80)
+C_OBSTACULO_MADERA = (139, 69, 19)
+C_OBSTACULO_BARRAS = (160, 82, 45)
 
-# Abeja
+# Colores Abeja
 C_ABEJA_CUERPO = (255, 220, 0)
 C_ABEJA_RAYAS = (40, 40, 40)
 C_ABEJA_ALAS = (200, 240, 255, 150)
 
-# Flores
-C_FLOR_SANA = (255, 255, 255)       # Margaritas
-C_FLOR_POLINIZADA = (255, 200, 100) # Naranja suave
+# Colores Flores y Estado
+C_FLOR_SANA = (255, 255, 255)
+C_FLOR_POLINIZADA = (255, 200, 100)
 C_FLOR_CENTRO = (255, 220, 0)
 C_PESTICIDA_LEVE = (200, 100, 200)
 C_PESTICIDA_GRAVE = (130, 50, 130)
 
-# UI
-C_BARRA_FONDO = (200, 200, 200)
+# Colores Barras
 C_VIDA = (231, 76, 60)
 C_ENERGIA = (52, 152, 219)
 C_NECTAR = (241, 196, 15)
+
+# Botones
 C_BOTON_ACTIVO = (255, 255, 255)
 C_BOTON_HOVER = (230, 230, 230)
 C_BOTON_BORDE = (200, 200, 200)
 
-# QL
-MAX_EPISODES_SAFETY = 1500
-MIN_EPISODES_WARMUP = 150
-CONVERGENCE_THRESHOLD = 0.0001
-epsilon = 0.1
-gamma = 0.9
-alpha = 0.1
 
 class BeeGameGUI:
+    """Clase principal que maneja la ventana, eventos y bucle del juego."""
+
     def __init__(self, filas=9, columnas=9, nectar_objetivo=100):
         pygame.init()
+        self.clock = pygame.time.Clock()
 
-        # Configuramos la ventana
-        self.CELL_SIZE = 62  # Celdas un poco más grandes para detalle
+        # Configuración de dimensiones
+        self.CELL_SIZE = 62
         self.PANEL_WIDTH = 400
         self.BOARD_WIDTH = columnas * self.CELL_SIZE
         self.BOARD_HEIGHT = filas * self.CELL_SIZE
         self.WINDOW_WIDTH = self.BOARD_WIDTH + self.PANEL_WIDTH
         self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 100, 730)
 
-        # Activamos el anti-aliasing y transparencia
+        # Configuración pantalla
         self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
         pygame.display.set_caption("BeeGame Simulator - Entorno Eco-Sistémico")
 
-        # Configuramos las fuentes de texto para mejor legibilidad
+        # Fuentes
+        self._inicializar_fuentes()
+
+        # Inicialización de lógica
+        self.filas_init = filas
+        self.columnas_init = columnas
+        self.nectar_objetivo_init = nectar_objetivo
+        self._inicializar_juego()
+
+    def _inicializar_fuentes(self):
+        """Intenta cargar fuentes del sistema, con fallback por defecto."""
         try:
             self.font_title = pygame.font.SysFont("Segoe UI", 36, bold=True)
             self.font_subtitle = pygame.font.SysFont("Segoe UI", 24, bold=True)
             self.font_normal = pygame.font.SysFont("Segoe UI", 18)
             self.font_bold = pygame.font.SysFont("Segoe UI", 18, bold=True)
             self.font_small = pygame.font.SysFont("Consolas", 14)
-        except:
+        except Exception:
             self.font_title = pygame.font.Font(None, 40)
             self.font_subtitle = pygame.font.Font(None, 28)
             self.font_normal = pygame.font.Font(None, 22)
             self.font_bold = pygame.font.Font(None, 22)
             self.font_small = pygame.font.Font(None, 18)
 
-        # Inicializamos los componentes del juego (misma lógica que antes)
-        self.board = Board(filas, columnas)
+    def _inicializar_juego(self):
+        """Reinicia todos los componentes y estados del juego."""
+        # Entidades
+        self.board = Board(self.filas_init, self.columnas_init)
         self.board.inicializar_tablero(num_flores=12, num_obstaculos=2)
+
+        start_pos = (self.board.pos_colmena[0] - 1, self.board.pos_colmena[1])
         self.abeja = Bee(vida=100)
-        self.pos_abeja = (self.board.pos_colmena[0] - 1, self.board.pos_colmena[1])
+        self.pos_abeja = start_pos
 
         self.humanidad_agente = Humanidad()
         self.eventos_azar = ChanceEvents()
-        self.heuristica = Heuristica(w1=10, w2=8, w3=15, w4=5, w5=3, w6=2, w7=1, w8=5, w9=5)
-        self.ai = ExpectimaxAI(max_depth=2, heuristica=self.heuristica)
-        self.game_manager = GameManager(nectar_objetivo=nectar_objetivo)
+        self.game_manager = GameManager(nectar_objetivo=self.nectar_objetivo_init)
 
-        # Variables de control
+        # IAs
+        self.heuristica = Heuristica()
+        self.ai = ExpectimaxAI(max_depth=2, heuristica=self.heuristica, nectar_objetivo=self.nectar_objetivo_init)
+        self.q_agent = QLearningAI(alpha=0.5, gamma=0.9, epsilon=0.3)
+
+        # Estado UI/Control
         self.turno = 0
         self.mensaje = "Bienvenido. Selecciona una acción."
         self.clima_actual = "Normal"
@@ -114,649 +132,93 @@ class BeeGameGUI:
         self.celda_seleccionada = None
         self.turno_jugador = True
         self.ultima_flor_recolectada = None
-
-        # Control de flores muertas {(f, c): turno_muerte}
         self.flores_muertas_timer = {}
 
-        # Control de IA Expectimax
-        self.usar_expectimax = True  # Toggle para activar/desactivar IA
-        self.usar_qlearning = not (self.usar_expectimax)
-        self.q_agent = QLearningAI(alpha=0.5, gamma=0.9, epsilon=0.3)
-        self.ultimo_estado_q = None
-        self.ultima_accion_q = None
+        # Configuración IA
+        self.usar_expectimax = True
+        self.usar_qlearning = False
         self.calculando_ia = False
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
         self.ia_error = [0]
 
-        # Control de IA Q-Learning
-        self.q_table = {}
-
-        # Animación A*
+        # Animaciones y Eventos
         self.moviendo_a_star = False
         self.ruta_a_star = []
         self.paso_a_star = 0
         self.timer_a_star = 0
         self.velocidad_a_star = 10
-        self.factor_random = 0.5  # Se ajusta según clima
+        self.factor_random = 0.5
 
-        # Eventos de clima
         self.mostrar_evento_clima = False
         self.mensaje_evento_clima = ""
         self.timer_evento_clima = 0
         self.duracion_evento_clima = 180
         self.mostrar_tooltip_clima = False
 
-        # Botones
-        self.botones = self.crear_botones()
-        self.clock = pygame.time.Clock()
+        self.botones = self._crear_rectangulos_botones()
 
-    def crear_botones(self):
-        x_start = self.BOARD_WIDTH + 25
-        y_start = 580
-        w = 165
-        h = 50
+    def _crear_rectangulos_botones(self):
+        """Define la geometría de los botones."""
+        x = self.BOARD_WIDTH + 25
+        y = 580
+        w, h = 165, 50
         gap = 20
 
-        # Botón reiniciar (debajo de las instrucciones)
-        btn_w, btn_h = 140, 40
-        btn_x = (self.BOARD_WIDTH // 2) - (btn_w // 2)
-        btn_y = self.BOARD_HEIGHT + 50
+        bx = (self.BOARD_WIDTH // 2) - (140 // 2)
+        by = self.BOARD_HEIGHT + 50
 
         return {
-            'recoger': pygame.Rect(x_start, y_start, w, h),
-            'descansar': pygame.Rect(x_start + w + gap, y_start, w, h),
-            'ir_a_la_colmena': pygame.Rect(x_start, y_start + h + gap, w, h),
-            'cambiar_IA': pygame.Rect(x_start + w + gap, y_start + h + gap, w, h),
-            'reiniciar': pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+            'recoger': pygame.Rect(x, y, w, h),
+            'descansar': pygame.Rect(x + w + gap, y, w, h),
+            'ir_a_la_colmena': pygame.Rect(x, y + h + gap, w, h),
+            'cambiar_IA': pygame.Rect(x + w + gap, y + h + gap, w, h),
+            'reiniciar': pygame.Rect(bx, by, 140, 40)
         }
 
-    def dibujar_tablero(self):
-        for fila in range(self.board.filas):
-            for col in range(self.board.columnas):
-                x = col * self.CELL_SIZE
-                y = fila * self.CELL_SIZE
-
-                # Patrón de ajedrez
-                color_bg = C_CESPED_CLARO if (fila + col) % 2 == 0 else C_CESPED_OSCURO
-                pygame.draw.rect(self.screen, color_bg, (x, y, self.CELL_SIZE, self.CELL_SIZE))
-
-                # Renderizamos el contenido
-                self.dibujar_contenido_celda(fila, col, x, y)
-
-                # Highlight de selección
-                if self.celda_seleccionada == (fila, col):
-                    s = pygame.Surface((self.CELL_SIZE, self.CELL_SIZE), pygame.SRCALPHA)
-                    s.fill(C_SELECCION)
-                    self.screen.blit(s, (x, y))
-                    pygame.draw.rect(self.screen, (255, 255, 255), (x, y, self.CELL_SIZE, self.CELL_SIZE), 3)
-
-        # Dibujamos las instrucciones debajo del tablero
-        self.dibujar_instrucciones_control()
-
-    def dibujar_instrucciones_control(self):
-        texto = "Clic izquierdo: Moverse  |  Clic derecho: Seleccionar casilla"
-        surf = self.font_normal.render(texto, True, C_TEXTO_PRINCIPAL)
-        # Lo centramos debajo del tablero
-        x = (self.BOARD_WIDTH // 2) - (surf.get_width() // 2)
-        y = self.BOARD_HEIGHT + 15
-        self.screen.blit(surf, (x, y))
-
-    def dibujar_contenido_celda(self, fila, col, x, y):
-        celda = self.board.grid[fila][col]
-        center_x = x + self.CELL_SIZE // 2
-        center_y = y + self.CELL_SIZE // 2
-
-        # Dibujamos la colmena
-        if celda == 'COLMENA':
-            self.dibujar_colmena(center_x, center_y)
-
-        # Dibujamos un obstaculo
-        elif celda == 'OBSTACULO':
-            self.dibujar_obstaculo(center_x, center_y)
-
-        # Dibujamos una flor
-        elif self.board.es_flor(fila, col):
-            flor = self.board.get_celda(fila, col)
-            self.dibujar_flor(center_x, center_y, flor, (fila, col))
-
-        # Dibujamos la abeja (encima de todo)
-        if (fila, col) == self.pos_abeja:
-            self.dibujar_abeja(center_x, center_y)
-
-    def dibujar_colmena(self, cx, cy):
-        # Base hexagonal o circular
-        radio = self.CELL_SIZE // 2.5
-        pygame.draw.circle(self.screen, C_COLMENA_BASE, (cx, cy), radio)
-
-        # Capas/Anillos
-        for i in range(3):
-            offset = i * 8
-            rect_w = radio * 1.5
-            rect_h = 10
-            r_rect = pygame.Rect(cx - rect_w//2, cy - 15 + offset, rect_w, rect_h)
-            pygame.draw.rect(self.screen, C_COLMENA_DETALLE, r_rect, border_radius=5)
-
-        # Entrada
-        pygame.draw.circle(self.screen, (50, 30, 0), (cx, cy + 10), 8)
-
-    def dibujar_obstaculo(self, cx, cy):
-        # Parámetros de la cerca de madera
-        num_postes = 3  # Número de postes de la cerca
-        ancho_poste = 15  # Ancho de cada poste
-        alto_poste = 62  # Alto de cada poste
-        espaciado_postes = 4  # Espacio entre los postes
-        color_madera = (139, 69, 19)  # Color de la madera (marrón)
-        color_barras = (160, 82, 45)  # Color de las barras de la cerca (madera más clara)
-
-        # Calculamos el ancho total de la cerca (para centrarla)
-        ancho_cerca = (ancho_poste * num_postes) + (espaciado_postes * (num_postes - 1))
-
-        # Dibujamos los postes de la cerca
-        for i in range(num_postes):
-            # Posición horizontal de cada poste
-            x_pos = cx - ancho_cerca // 2 + i * (ancho_poste + espaciado_postes) +7
-            pygame.draw.rect(self.screen, color_madera, pygame.Rect(x_pos - ancho_poste // 2, cy - alto_poste // 2, ancho_poste, alto_poste))
-
-        # Dibujamos las barras horizontales (las que unen los postes)
-        barra_y_pos = cy - alto_poste // 4  # Posición vertical de la barra superior
-        pygame.draw.rect(self.screen, color_barras, pygame.Rect(cx - ancho_cerca // 2 -5, barra_y_pos, ancho_cerca+10, 10))
-
-        barra_y_pos = cy + alto_poste // 4  # Posición vertical de la barra inferior
-        pygame.draw.rect(self.screen, color_barras, pygame.Rect(cx - ancho_cerca // 2 -5, barra_y_pos, ancho_cerca+10, 10))
-
-    def dibujar_flor(self, cx, cy, flor, pos_grid):
-        # Gestión de desaparición de flores muertas
-        if flor.vida <= 0:
-            if pos_grid not in self.flores_muertas_timer:
-                self.flores_muertas_timer[pos_grid] = self.turno
-
-            turnos_muerta = self.turno - self.flores_muertas_timer[pos_grid]
-
-            # Si han pasado más de 2 turnos desde que murió, no se dibuja (desaparece)
-            if turnos_muerta > 2:
-                return
-
-            # Dibujar flor marchita
-            pygame.draw.line(self.screen, (100, 80, 50), (cx, cy), (cx, cy+20), 3) # Tallo
-            pygame.draw.circle(self.screen, (100, 80, 50), (cx, cy-5), 8) # Cabeza muerta
-
-            # Indicador visual de desvanecimiento
-            if turnos_muerta >= 2: # Último turno visible
-                 texto = self.font_small.render("X", True, (50, 0, 0))
-                 self.screen.blit(texto, (cx-5, cy-25))
-            return
-
-        # Si la flor revive o es nueva, la borramos del timer de muertas
-        if pos_grid in self.flores_muertas_timer:
-            del self.flores_muertas_timer[pos_grid]
-
-        # Tallo
-        pygame.draw.line(self.screen, (50, 150, 50), (cx, cy+25), (cx, cy), 4)
-
-        # Determinamos el color de los pétalos
-        color_petalo = C_FLOR_SANA
-        if flor.polinizacion == 1:
-            color_petalo = C_FLOR_POLINIZADA
-
-        if flor.pesticidas >= 2:
-            color_petalo = C_PESTICIDA_GRAVE
-        elif flor.pesticidas >= 1:
-            color_petalo = C_PESTICIDA_LEVE
-
-        # Dibujamos 5 pétalos
-        radio_petalo = 12
-        offset_petalo = 15
-        for i in range(5):
-            angle = (2 * math.pi / 5) * i
-            px = cx + math.cos(angle) * offset_petalo
-            py = cy + math.sin(angle) * offset_petalo
-            pygame.draw.circle(self.screen, color_petalo, (px, py), radio_petalo)
-            pygame.draw.circle(self.screen, (200, 200, 200), (px, py), radio_petalo, 1) # Borde sutil
-
-        # Centro
-        pygame.draw.circle(self.screen, C_FLOR_CENTRO, (cx, cy), 10)
-
-        # Indicador de pesticida (partículas)
-        if flor.pesticidas > 0:
-            for i in range(flor.pesticidas * 3):
-                ox = cx + math.cos(i) * 20
-                oy = cy + math.sin(i) * 20 - 20
-                pygame.draw.circle(self.screen, (255, 50, 50), (ox, oy), 3)
-
-    def dibujar_abeja(self, cx, cy):
-        # Alas (con transparencia)
-        alas_surf = pygame.Surface((60, 40), pygame.SRCALPHA)
-        pygame.draw.ellipse(alas_surf, C_ABEJA_ALAS, (0, 0, 25, 40)) # Ala izq
-        pygame.draw.ellipse(alas_surf, C_ABEJA_ALAS, (35, 0, 25, 40)) # Ala der
-        # Rotamos las alas ligeramente si se está moviendo (efecto visual simple)
-        if self.moviendo_a_star:
-            offset_ala = math.sin(pygame.time.get_ticks() * 0.02) * 5
-            self.screen.blit(alas_surf, (cx - 30, cy - 25 + offset_ala))
-        else:
-            self.screen.blit(alas_surf, (cx - 30, cy - 25))
-
-        # Cuerpo
-        cuerpo_rect = pygame.Rect(cx - 15, cy - 12, 30, 24)
-        pygame.draw.rect(self.screen, C_ABEJA_CUERPO, cuerpo_rect, border_radius=12)
-
-        # Rayas
-        pygame.draw.line(self.screen, C_ABEJA_RAYAS, (cx-5, cy-12), (cx-5, cy+12), 4)
-        pygame.draw.line(self.screen, C_ABEJA_RAYAS, (cx+5, cy-12), (cx+5, cy+12), 4)
-
-        # Ojos
-        pygame.draw.circle(self.screen, (0, 0, 0), (cx + 8, cy - 4), 3)
-        pygame.draw.circle(self.screen, (0, 0, 0), (cx + 8, cy + 4), 3)
-
-        # Mochila de polen
-        if self.abeja.nectar_cargado > 0:
-             pygame.draw.circle(self.screen, C_NECTAR, (cx - 8, cy), 6)
-
-    # UI
-    def dibujar_panel_info(self):
-        # Fondo panel
-        panel_rect = pygame.Rect(self.BOARD_WIDTH, 0, self.PANEL_WIDTH, self.WINDOW_HEIGHT)
-        pygame.draw.rect(self.screen, C_FONDO_PANEL, panel_rect)
-        pygame.draw.line(self.screen, (200, 200, 200), (self.BOARD_WIDTH, 0), (self.BOARD_WIDTH, self.WINDOW_HEIGHT), 2)
-
-        x_pad = self.BOARD_WIDTH + 25
-        y = 30
-
-        # Título
-        txt = self.font_title.render("BeeGame IA", True, C_TEXTO_PRINCIPAL)
-        self.screen.blit(txt, (x_pad, y))
-        y += 50
-
-        # Sección Estadísticas
-        self.dibujar_seccion_stats(x_pad, y)
-        y += 200
-
-        self.dibujar_separador(y)
-        y += 20
-
-        # Clima
-        self.dibujar_widget_clima(x_pad, y)
-        y += 80
-
-        # Widget de IA
-        self.dibujar_widget_ia(x_pad, y)
-        y += 90
-
-        # Caja de mensajes
-        self.dibujar_log(x_pad, y)
-
-    def dibujar_separador(self, y):
-        pygame.draw.line(self.screen, (220, 220, 220),
-                         (self.BOARD_WIDTH + 20, y),
-                         (self.WINDOW_WIDTH - 20, y), 1)
-
-    def dibujar_seccion_stats(self, x, y):
-        # Título sección
-        self.screen.blit(self.font_subtitle.render("Estado de la Colmena", True, C_TEXTO_SECUNDARIO), (x, y))
-        y += 35
-
-        # Barras
-        self.crear_barra_progreso(x, y, "Vida", self.abeja.vida, self.abeja.max_vida, C_VIDA)
-        y += 45
-        self.crear_barra_progreso(x, y, "Energía", self.abeja.energia, self.abeja.max_energia, C_ENERGIA)
-        y += 45
-
-        # Néctar mochila
-        self.crear_barra_progreso(x, y, f"Mochila:({self.abeja.nectar_cargado} / {self.abeja.capacidad_nectar})", self.abeja.nectar_cargado, self.abeja.capacidad_nectar, C_NECTAR)
-
-        y += 45
-        # Néctar colmena (objetivo)
-        act = self.board.nectar_en_colmena
-        txt = self.font_normal.render(f"Miel en la colmena: {act} ", True, C_TEXTO_PRINCIPAL)
-        self.screen.blit(txt, (x, y))
-
-    def crear_barra_progreso(self, x, y, etiqueta, valor, maximo, color):
-        # Texto
-        lbl = self.font_small.render(etiqueta, True, C_TEXTO_SECUNDARIO)
-        self.screen.blit(lbl, (x, y))
-
-        # Barra fondo
-        rect_bg = pygame.Rect(x, y + 18, 350, 12)
-        pygame.draw.rect(self.screen, (230, 230, 230), rect_bg, border_radius=6)
-
-        # Barra valor
-        if maximo > 0:
-            ancho = int((valor / maximo) * 350)
-            ancho = max(0, min(ancho, 350))
-            rect_val = pygame.Rect(x, y + 18, ancho, 12)
-            pygame.draw.rect(self.screen, color, rect_val, border_radius=6)
-
-    def dibujar_widget_clima(self, x, y):
-        rect_clima = pygame.Rect(x, y, 350, 60)
-        pygame.draw.rect(self.screen, (255, 255, 255), rect_clima, border_radius=10)
-        pygame.draw.rect(self.screen, (220, 220, 230), rect_clima, 1, border_radius=10)
-
-        # Icono clima
-        cx = x + 40
-        cy = y + 30
-
-        if self.clima_actual == "Lluvia":
-            pygame.draw.circle(self.screen, (100, 100, 150), (cx, cy-5), 15)
-            # Gotas
-            pygame.draw.line(self.screen, C_ENERGIA, (cx-5, cy+10), (cx-10, cy+20), 2)
-            pygame.draw.line(self.screen, C_ENERGIA, (cx+5, cy+10), (cx, cy+20), 2)
-            color_txt = C_ENERGIA
-        elif self.clima_actual == "Sol":
-            pygame.draw.circle(self.screen, (255, 200, 0), (cx, cy), 12)
-            # Rayos
-            for i in range(0, 360, 45):
-                rad = math.radians(i)
-                pygame.draw.line(self.screen, (255, 200, 0),
-                                 (cx + math.cos(rad)*15, cy + math.sin(rad)*15),
-                                 (cx + math.cos(rad)*20, cy + math.sin(rad)*20), 2)
-            color_txt = (200, 150, 0)
-        else:
-            pygame.draw.circle(self.screen, (200, 200, 200), (cx, cy), 15)
-            pygame.draw.circle(self.screen, (220, 220, 220), (cx+10, cy+5), 12)
-            color_txt = C_TEXTO_SECUNDARIO
-
-        txt_c = self.font_bold.render(f"Clima: {self.clima_actual}", True, color_txt)
-        self.screen.blit(txt_c, (x + 80, y + 20))
-
-        # Botón de ayuda "?"
-        mouse_pos = pygame.mouse.get_pos()
-        help_rect = pygame.Rect(x + 310, y + 10, 30, 30)
-        hover_help = help_rect.collidepoint(mouse_pos)
-
-        # Círculo de ayuda
-        color_help = (100, 150, 255) if hover_help else (150, 150, 150)
-        pygame.draw.circle(self.screen, color_help, (x + 325, y + 25), 15)
-        pygame.draw.circle(self.screen, (255, 255, 255), (x + 325, y + 25), 15, 2)
-
-        # Símbolo "?"
-        txt_help = self.font_subtitle.render("?", True, (255, 255, 255))
-        self.screen.blit(txt_help, (x + 318, y + 12))
-
-        # Guardamos el rect para detección de clic
-        self.help_clima_rect = help_rect
-
-    def dibujar_widget_ia(self, x, y):
-        """
-        Dibuja información del estado de la IA (Expectimax o Q-Learning)
-        """
-        rect_ia = pygame.Rect(x, y, 350, 75)
-        pygame.draw.rect(self.screen, (255, 255, 255), rect_ia, border_radius=10)
-        pygame.draw.rect(self.screen, (220, 220, 230), rect_ia, 1, border_radius=10)
-
-        # Título dinámico: muestra qué IA está funcionando
-        nombre_ia = "IA Expectimax" if self.usar_expectimax else "IA Q-Learning"
-        titulo = self.font_bold.render(nombre_ia, True, C_TEXTO_PRINCIPAL)
-        self.screen.blit(titulo, (x + 15, y + 10))
-
-        # Estado: siempre ACTIVA porque alternamos entre una y otra
-        estado_txt = "ACTIVADO"
-        color_estado = (50, 200, 50)  # Verde
-        estado_surf = self.font_small.render(f"Estado: {estado_txt}", True, color_estado)
-        self.screen.blit(estado_surf, (x + 15, y + 35))
-
-        # Estadísticas (si está activa)
-        if self.usar_expectimax or self.usar_qlearning:
-            # Nodos explorados
-            nodos_txt = self.font_small.render(f"Nodos: {self.nodos_explorados}", True, C_TEXTO_SECUNDARIO)
-            self.screen.blit(nodos_txt, (x + 15, y + 53))
-
-            # Tiempo de cálculo
-            tiempo_txt = self.font_small.render(f"Tiempo: {self.tiempo_calculo_ia * 1000:.0f}ms", True, C_TEXTO_SECUNDARIO)
-            self.screen.blit(tiempo_txt, (x + 110, y + 53))
-
-            # Error de cálculo
-            error_txt = self.font_small.render(f"Error: {self.ia_error[-1]:.0f} {mean(self.ia_error):.2f}", True, C_TEXTO_SECUNDARIO)
-            self.screen.blit(error_txt, (x + 220, y + 53))
-
-        # Indicador de procesamiento
-        if self.calculando_ia:
-            # Spinner animado
-            angulo = (pygame.time.get_ticks() // 100) % 8
-            spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
-            spinner = self.font_subtitle.render(spinner_chars[angulo], True, (100, 150, 255))
-            self.screen.blit(spinner, (x + 310, y + 8))
-
-    def dibujar_tooltip_clima(self, x, y):
-        """Dibuja un tooltip explicando los estados del clima"""
-        tooltip_width = 400
-        tooltip_height = 280
-        # Centramos el popup en la pantalla
-        tooltip_x = (self.WINDOW_WIDTH - tooltip_width) // 2
-        tooltip_y = (self.WINDOW_HEIGHT - tooltip_height) // 2
-
-        # Overlay oscuro de fondo
-        overlay = pygame.Surface((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        self.screen.blit(overlay, (0, 0))
-
-        # Fondo del tooltip con sombra suave
-        shadow = pygame.Rect(tooltip_x + 6, tooltip_y + 6, tooltip_width, tooltip_height)
-        shadow_surf = pygame.Surface((tooltip_width, tooltip_height), pygame.SRCALPHA)
-        pygame.draw.rect(shadow_surf, (0, 0, 0, 60), (0, 0, tooltip_width, tooltip_height), border_radius=15)
-        self.screen.blit(shadow_surf, (tooltip_x + 6, tooltip_y + 6))
-
-        # Fondo principal
-        tooltip_rect = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
-        pygame.draw.rect(self.screen, (255, 255, 255), tooltip_rect, border_radius=15)
-        pygame.draw.rect(self.screen, (180, 180, 180), tooltip_rect, 2, border_radius=15)
-
-        # Botón de cerrar (X), arriba a la derecha
-        close_x = tooltip_x + tooltip_width - 40
-        close_y = tooltip_y + 12
-        close_rect = pygame.Rect(close_x, close_y, 28, 28)
-
-        mouse_pos = pygame.mouse.get_pos()
-        hover_close = close_rect.collidepoint(mouse_pos)
-
-        color_close_bg = (220, 60, 60) if hover_close else (200, 200, 200)
-        pygame.draw.circle(self.screen, color_close_bg, (close_x + 14, close_y + 14), 14)
-
-        close_txt = self.font_bold.render("✕", True, (255, 255, 255))
-        self.screen.blit(close_txt, (close_x + 6, close_y + 2))
-
-        # Guardamos el rect para cerrar con clic
-        self.close_tooltip_rect = close_rect
-
-        # Título principal
-        titulo = self.font_subtitle.render("Estados del Clima", True, (40, 40, 40))
-        titulo_x = tooltip_x + (tooltip_width - titulo.get_width()) // 2
-        self.screen.blit(titulo, (titulo_x, tooltip_y + 20))
-
-        # Línea separadora elegante
-        pygame.draw.line(self.screen, (220, 220, 220),
-                        (tooltip_x + 30, tooltip_y + 60),
-                        (tooltip_x + tooltip_width - 30, tooltip_y + 60), 2)
-
-        # Margen interno
-        margin_x = tooltip_x + 30
-        y_offset = tooltip_y + 80
-        spacing = 62
-
-        # === LLUVIA ===
-        # Icono de fondo
-        pygame.draw.circle(self.screen, (230, 240, 255), (margin_x + 25, y_offset + 20), 22)
-        lluvia_icon = self.font_title.render("🌧", True, (52, 152, 219))
-        self.screen.blit(lluvia_icon, (margin_x + 10, y_offset + 2))
-
-        lluvia_titulo = self.font_bold.render("Lluvia (10%)", True, (52, 152, 219))
-        self.screen.blit(lluvia_titulo, (margin_x + 60, y_offset + 5))
-
-        lluvia_desc1 = self.font_small.render("-1 pesticida a las flores afectadas", True, (70, 70, 70))
-        self.screen.blit(lluvia_desc1, (margin_x + 60, y_offset + 28))
-        lluvia_desc2 = self.font_small.render("(limpia la contaminación)", True, (120, 120, 120))
-        self.screen.blit(lluvia_desc2, (margin_x + 60, y_offset + 44))
-
-        y_offset += spacing
-
-        # === SOL ===
-        pygame.draw.circle(self.screen, (255, 250, 230), (margin_x + 25, y_offset + 20), 22)
-        sol_icon = self.font_title.render("☀", True, (255, 180, 0))
-        self.screen.blit(sol_icon, (margin_x + 10, y_offset + 2))
-
-        sol_titulo = self.font_bold.render("Sol (15%)", True, (230, 150, 0))
-        self.screen.blit(sol_titulo, (margin_x + 60, y_offset + 5))
-
-        sol_desc1 = self.font_small.render("+20% probabilidad de reproducción", True, (70, 70, 70))
-        self.screen.blit(sol_desc1, (margin_x + 60, y_offset + 28))
-        sol_desc2 = self.font_small.render("de flores polinizadas", True, (120, 120, 120))
-        self.screen.blit(sol_desc2, (margin_x + 60, y_offset + 44))
-
-        y_offset += spacing
-
-        # === NORMAL ===
-        pygame.draw.circle(self.screen, (245, 245, 245), (margin_x + 25, y_offset + 20), 22)
-        normal_icon = self.font_title.render("☁", True, (150, 150, 150))
-        self.screen.blit(normal_icon, (margin_x + 10, y_offset + 2))
-
-        normal_titulo = self.font_bold.render("Normal (75%)", True, (100, 100, 100))
-        self.screen.blit(normal_titulo, (margin_x + 60, y_offset + 5))
-
-        normal_desc = self.font_small.render("Sin efectos especiales", True, (70, 70, 70))
-        self.screen.blit(normal_desc, (margin_x + 60, y_offset + 28))
-        normal_desc2 = self.font_small.render("Condiciones climáticas estables", True, (120, 120, 120))
-        self.screen.blit(normal_desc2, (margin_x + 60, y_offset + 44))
-
-    def dibujar_log(self, x, y):
-        rect_log = pygame.Rect(x, y, 350, 100)
-        pygame.draw.rect(self.screen, (255, 255, 255), rect_log, border_radius=5)
-        pygame.draw.rect(self.screen, (200, 200, 200), rect_log, 1, border_radius=5)
-
-        # Wrap de texto simple
-        palabras = self.mensaje.split(' ')
-        lineas = []
-        actual = ""
-        for p in palabras:
-            test = actual + p + " "
-            if len(test) > 40:
-                lineas.append(actual)
-                actual = p + " "
-            else:
-                actual = test
-        lineas.append(actual)
-
-        # Dibujamos las últimas 4 líneas
-        off_y = y + 10
-        for linea in lineas[-4:]:
-            txt = self.font_small.render(linea, True, C_TEXTO_PRINCIPAL)
-            self.screen.blit(txt, (x + 10, off_y))
-            off_y += 20
-
-    def dibujar_botones(self):
-        mouse_pos = pygame.mouse.get_pos()
-        activo_global = self.turno_jugador and not self.game_over
-
-        for key, rect in self.botones.items():
-            # Botón de reinicio siempre activo
-            es_reinicio = (key == 'reiniciar')
-            activo = activo_global or es_reinicio
-
-            hover = rect.collidepoint(mouse_pos) and activo
-
-            # Colores
-            if not activo_global:
-                bg = (230, 230, 230)
-                border = (200, 200, 200)
-                txt_c = (150, 150, 150)
-            elif hover:
-                bg = C_BOTON_HOVER
-                border = (100, 100, 100)
-                txt_c = C_TEXTO_PRINCIPAL
-            else:
-                bg = C_BOTON_ACTIVO
-                border = C_BOTON_BORDE
-                txt_c = C_TEXTO_PRINCIPAL
-
-            # Dibujar botón con sombra
-            if activo_global and not hover:
-                pygame.draw.rect(self.screen, (200, 200, 200), (rect.x, rect.y+3, rect.width, rect.height), border_radius=8)
-
-            pygame.draw.rect(self.screen, bg, rect, border_radius=8)
-            pygame.draw.rect(self.screen, border, rect, 2, border_radius=8)
-
-            # Texto e icono (simulado con texto)
-            label = key.replace("_", " ").upper()
-            txt_s = self.font_bold.render(f"{label}", True, txt_c)
-
-            cx = rect.x + rect.width // 2 - txt_s.get_width() // 2
-            cy = rect.y + rect.height // 2 - txt_s.get_height() // 2
-            self.screen.blit(txt_s, (cx, cy))
-
-    def dibujar_evento_climatico(self):
-        if not self.mostrar_evento_clima: return
-
-        overlay = pygame.Surface((self.WINDOW_WIDTH, 80), pygame.SRCALPHA)
-        color_bg = (50, 50, 50, 220)
-        if "Sol" in self.mensaje_evento_clima: color_bg = (255, 200, 0, 220)
-        elif "Lluvia" in self.mensaje_evento_clima: color_bg = (50, 50, 200, 220)
-
-        overlay.fill(color_bg)
-
-        y_pos = self.WINDOW_HEIGHT // 2 - 40
-        self.screen.blit(overlay, (0, y_pos))
-
-        txt = self.font_title.render(self.mensaje_evento_clima, True, (255, 255, 255))
-        cx = self.WINDOW_WIDTH // 2 - txt.get_width() // 2
-        cy = y_pos + 40 - txt.get_height() // 2
-        self.screen.blit(txt, (cx, cy))
-
-    def obtener_celda_clic(self, pos):
-        x, y = pos
-        if x < self.BOARD_WIDTH and y < self.BOARD_HEIGHT:
-            return (y // self.CELL_SIZE, x // self.CELL_SIZE)
-        return None
+    # === LÓGICA DEL JUGADOR (ABEJA) ===
 
     def mover_abeja(self, destino):
-        if self.game_over or not self.turno_jugador: return False
+        if self.game_over or not self.turno_jugador: return
 
-        # Si la abeja intenta moverse a la misma posición/casilla donde está no queremos
-        # que gaste una acción del jugador, solo avisarle con un mensaje
         if destino == self.pos_abeja:
-            self.mensaje = "¡Ya estás en esa posición! Elige otro movimiento."
-            return False
+            self.mensaje = "Ya estás en esa posición."
+            return
 
-        # Si la abeja intenta moverse a una posición/casilla que no llega mostramos el mensaje correspondiente
-        if not self.abeja.is_valid_move(self.board, self.pos_abeja, destino):
-            self.mensaje = "¡Demasiado lejos! Solo puedes moverte 1 casilla."
-            return False
+        if not self.abeja.es_movimiento_valido(self.board, self.pos_abeja, destino):
+            self.mensaje = "¡Demasiado lejos! Solo 1 casilla."
+            return
 
-        fila, col = destino
-        if self.board.es_transitable(fila, col):
-            if self.abeja.mover(self.board, self.pos_abeja, destino):
-                # Reseteamos la ultima flor recolectada, como está moviendose ya no está abusando de una flor
-                # (recolectar nectar sin parar hasta que la flor muera o tenga el inventario lleno)
-                self.ultima_flor_recolectada = None
+        if not self.board.es_transitable(destino[0], destino[1]):
+            self.mensaje = "Camino bloqueado."
+            return
 
-                # Chequeo pesticida
-                celda = self.board.get_celda(fila, col)
-                daño = 0
-                if hasattr(celda, 'pesticidas') and celda.pesticidas > 0:
-                     daño = celda.get_daño_pesticida() if hasattr(celda, 'get_daño_pesticida') else 0
-
-                self.pos_abeja = destino
-                self.mensaje = f"Movimiento a ({fila}, {col})"
-                if daño > 0:
-                    self.mensaje += f"  ¡Daño -{daño}! ¡Abeja desorientada!"
-                    self.factor_random = 0.75
-
-                if self.board.es_colmena(fila, col):
-                    nectar_descargado = self.abeja.nectar_cargado
-                    self.abeja.descargar_nectar_en_colmena(self.board, self.pos_abeja)
-                    self.abeja.recuperar_energia_en_colmena(self.board, self.pos_abeja)
-                    if nectar_descargado > 0:
-                        self.mensaje = f"¡En casa! Energía y vida recuperadas. Miel descargada: {nectar_descargado}"
-                    else:
-                        self.mensaje = "¡En casa! Energía y vida recuperadas."
-                    if self.factor_random > 0.8:
-                        self.mensaje = "La abeja ha descansado, recupera la orientación"
-                    self.factor_random = 0.25
-
-                self.finalizar_turno_jugador()
-                return True
-            else:
-                self.mensaje = "¡No tienes energía suficiente para moverte!"
+        if self.abeja.mover(self.board, self.pos_abeja, destino):
+            self._procesar_movimiento_exitoso(destino)
         else:
-            self.mensaje = "Camino bloqueado por obstáculo."
-        return False
+            self.mensaje = "¡No tienes energía suficiente!"
+
+    def _procesar_movimiento_exitoso(self, destino):
+        self.ultima_flor_recolectada = None
+        self.pos_abeja = destino
+
+        msg = f"Movimiento a {destino}"
+
+        celda = self.board.get_celda(*destino)
+        daño = getattr(celda, 'get_daño_pesticida', lambda: 0)()
+        if daño > 0:
+            msg += f" ¡Daño -{daño}!"
+            self.factor_random = 0.75
+
+        if self.board.es_colmena(*destino):
+            miel = self.abeja.nectar_cargado
+            self.abeja.descargar_nectar_en_colmena(self.board, self.pos_abeja)
+            self.abeja.recuperar_energia_en_colmena(self.board, self.pos_abeja)
+            msg = "¡En casa! Recuperado." + (f" Miel: +{miel}" if miel > 0 else "")
+            self.factor_random = 0.25
+
+        self.mensaje = msg
+        self.finalizar_turno_jugador()
 
     def recoger_nectar(self):
         if self.game_over or not self.celda_seleccionada:
@@ -764,39 +226,29 @@ class BeeGameGUI:
             return
 
         f, c = self.celda_seleccionada
-
-        # Comprobamos que no esté abusando de esa flor (recogiendo nectar sin parar)
         if (f, c) == self.ultima_flor_recolectada:
-            self.mensaje = "Ya has recolectado aquí. Muévete para recolectar de nuevo."
+            self.mensaje = "Ya has recolectado aquí."
             return
 
-        # Check adyacencia
-        if abs(self.pos_abeja[0]-f) <= 1 and abs(self.pos_abeja[1]-c) <= 1:
-            if self.board.es_flor(f, c):
-                if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
-                    self.ultima_flor_recolectada = (f, c)
-                    self.mensaje = f"¡Néctar +10! Flor polinizada en ({f},{c})"
-                    # Chequeo pesticida
-                    celda = self.board.get_celda(f, c)
-                    daño = 0
-                    if hasattr(celda, 'pesticidas') and celda.pesticidas > 0:
-                        # Aplicamos daño si pasa por una flor con pesticidas
-                        daño = self.abeja.aplicar_daño_por_flor(self.board, (f, c))
+        if max(abs(self.pos_abeja[0] - f), abs(self.pos_abeja[1] - c)) > 1:
+            self.mensaje = "¡Acércate más a la flor!"
+            return
 
-                    if daño > 0: self.mensaje += f"  ¡Daño -{daño}!"
-                    self.finalizar_turno_jugador()
-                    self.celda_seleccionada = None  # Para que al hacer A* no se detenga la abeja en esa casilla
-                else:
-                    if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
-                        self.mensaje = "¡No tienes energía suficiente para recoger néctar!"
-                    elif not self.abeja.puede_cargar_nectar():
-                        self.mensaje = "Mochila llena. Ve a la colmena a descargar."
-                    else:
-                        self.mensaje = "Flor muerta o sin néctar."
-            else:
-                self.mensaje = "Eso no es una flor."
+        if self.abeja.recoger_nectar_y_polinizar(self.board, (f, c)):
+            self.ultima_flor_recolectada = (f, c)
+            self.mensaje = f"¡Néctar +10! Flor polinizada en ({f},{c})"
+            self.celda_seleccionada = None
+            self.finalizar_turno_jugador()
         else:
-            self.mensaje = "¡Demasiado lejos! Muévete más cerca."
+            self._explicar_fallo_recoleccion()
+
+    def _explicar_fallo_recoleccion(self):
+        if not self.abeja.tiene_energia(self.abeja.coste_recoleccion):
+            self.mensaje = "Sin energía para recolectar."
+        elif not self.abeja.puede_cargar_nectar():
+            self.mensaje = "Mochila llena."
+        else:
+            self.mensaje = "Flor no válida o vacía."
 
     def accion_descansar(self):
         if self.game_over: return
@@ -806,259 +258,172 @@ class BeeGameGUI:
 
     def accion_volver_colmena_a_star(self):
         if self.game_over or self.moviendo_a_star: return
-        ruta = self.abeja.calcular_ruta_a_colmena(
-            self.board,
-            self.pos_abeja,
-            factor_aleatorio=self.factor_random
-        )
-        if ruta and len(ruta) > 1:
-            # Calculamos el coste total de la ruta
-            coste_total = (len(ruta) - 1) * self.abeja.coste_movimiento
 
-            if self.abeja.energia < coste_total:
-                # Solo muestra mensaje, NO activa el movimiento
-                self.mensaje = f"A* ALERTA: Energía insuficiente ({self.abeja.energia}/{coste_total}) para llegar."
+        ruta = self.abeja.calcular_ruta_a_colmena(self.board, self.pos_abeja, self.factor_random)
+
+        if ruta and len(ruta) > 1:
+            coste = (len(ruta) - 1) * self.abeja.coste_movimiento
+            if self.abeja.energia < coste:
+                self.mensaje = f"A* Alerta: Energía insuficiente ({self.abeja.energia}/{coste})."
             else:
-                # Si hay energía, activa el movimiento
                 self.moviendo_a_star = True
                 self.ruta_a_star = ruta
                 self.paso_a_star = 1
                 self.timer_a_star = 0
-
-                self.mensaje = f"Piloto automático A* activado ({len(ruta)-1} pasos)..."
+                self.mensaje = "Piloto automático A* activado..."
         else:
-            self.mensaje = "Ya estás en casa o no hay ruta disponible."
-
-    def accion_ia(self):
-        self.usar_expectimax = not self.usar_expectimax
-        self.usar_qlearning = not self.usar_expectimax  # Alterna el otro algoritmo
-
-        # Actualizamos el mensaje y hacemos un print por consola
-        estado_txt = "ACTIVADO" if self.usar_expectimax else "DESACTIVADO (Q-Learning ACTIVADO)"
-        self.mensaje = f"Expectimax {estado_txt}."
-        print(f"[INFO] IA Expectimax {estado_txt}.")
-
-    def actualizar_a_star(self):
-        self.timer_a_star += 1
-        if self.timer_a_star >= self.velocidad_a_star:
-            self.timer_a_star = 0
-            if self.paso_a_star < len(self.ruta_a_star):
-                dest = self.ruta_a_star[self.paso_a_star]
-                if self.abeja.mover(self.board, self.pos_abeja, dest):
-                    self.pos_abeja = dest
-                    self.paso_a_star += 1
-                else:
-                    self.moviendo_a_star = False # Sin energía
-            else:
-                self.moviendo_a_star = False
-                # Auto-descarga el nectar al llegar
-                if self.board.es_colmena(*self.pos_abeja):
-                    nectar_desc = self.abeja.nectar_cargado
-                    self.abeja.descargar_nectar_en_colmena(self.board, self.pos_abeja)
-                    self.abeja.recuperar_energia_en_colmena(self.board, self.pos_abeja)
-                    self.mensaje = f" A* completado. Miel descargada: {nectar_desc}. Vida y energía restauradas."
-                else:
-                    self.mensaje = " A* completado. Llegada a destino."
-                self.finalizar_turno_jugador()
+            self.mensaje = "No se encontró ruta o ya estás en casa."
 
     def finalizar_turno_jugador(self):
         self.turno_jugador = False
         self.turno_humanidad()
 
+    # === LÓGICA DE LA IA (HUMANIDAD) ===
+
     def turno_humanidad(self):
         if self.game_over: return
         self.turno += 1
-        acciones_validas = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+
+        acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
         accion_realizada = False
-        import time
+
+        start_time = time.time()
+        self.calculando_ia = True
+
         if self.usar_expectimax:
-            # ===== MODO EXPECTIMAX: IA INTELIGENTE =====
-            self.calculando_ia = True
-
-            inicio = time.time()
-
-            # Creamos el estado actual del juego
-            estado_actual = GameState(
-                tablero=self.board,
-                abeja=self.abeja,
-                pos_abeja=self.pos_abeja,
-                humanidad=self.humanidad_agente,
-                eventos_azar=self.eventos_azar,
-                turno=self.turno
-            )
-
-            # Obtenemos las acciones válidas
-            acciones_validas = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
-
-            if acciones_validas:
-                # Evaluamos cada acción usando Expectimax (simplificado para MIN)
-                mejor_accion = None
-                peor_valor = float('inf')
-
-                for accion in acciones_validas:
-                    # Simulamos una acción
-                    estado_test = estado_actual.copy()
-                    estado_test.humanidad.ejecutar_accion(estado_test.tablero, accion, estado_test.pos_abeja)
-
-                    # Evaluamos usando Expectimax (desde perspectiva CHANCE -> MAX)
-                    valor = self.ai.expectimax(estado_test, 0, 'CHANCE')
-
-                    # MIN busca minimizar el valor para MAX
-                    if valor < peor_valor:
-                        peor_valor = valor
-                        mejor_accion = accion
-
-                # Ejecutamos la mejor acción encontrada
-                if mejor_accion:
-                    tipo, pos = mejor_accion
-                    if tipo == 'pesticida':
-                        f, c = pos
-                        flor = self.board.get_celda(f, c)
-                        flor.aplicar_pesticida()
-                        self.mensaje = f"Expectimax: Pesticida estratégico en ({f},{c}) [Valor: {peor_valor:.1f}]"
-                        accion_realizada = True
-                    elif tipo == 'obstaculo':
-                        # Usamos el método de humanidad que maneja el límite de 4 obstáculos
-                        exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
-                        if exito:
-                            self.mensaje = f"Expectimax: Obstáculo táctico en ({pos[0]},{pos[1]}) [Valor: {peor_valor:.1f}]"
-                            accion_realizada = True
-
-            # Guardamos estadísticas
-            self.tiempo_calculo_ia = time.time() - inicio
-            self.nodos_explorados = self.ai.nodos_explorados
-
-            # === CÁLCULO DEL ERROR USANDO MÉTODO DE HUMANIDAD ===
-            # A) Distancia entre NUEVO PESTICIDA y ABEJA
-            dist_pesticida_abeja = self.humanidad_agente.distancia_chebyshev(pos, self.pos_abeja)
-
-            # B) Distancia entre ABEJA y FLOR MÁS CERCANA (VIVA)
-            flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
-            dist_flor_cercana = 0
-            if flores_vivas:
-                distancias = [self.humanidad_agente.distancia_chebyshev(p, self.pos_abeja) for p in flores_vivas]
-                dist_flor_cercana = min(distancias)
-
-            # C) El Error es la diferencia
-            self.ia_error.append(abs(dist_pesticida_abeja - dist_flor_cercana))
-            self.calculando_ia = False
-
+            accion_realizada = self._ejecutar_logica_expectimax(acciones)
         elif self.usar_qlearning:
-            # ===== MODO Q-Learning =====
-            self.calculando_ia = True
-
-            inicio = time.time()
-            # Observamos el estado actual S
-            estado_actual = self.q_agent.obtener_estado(self.board, self.pos_abeja)
-
-            # Escogemos la accion A
-            accion = self.q_agent.escoger_accion(estado_actual, acciones_validas)
-
-            if accion:
-                tipo, pos = accion
-
-                # Ejecutamos la accion y calculamos la recompensa inmediata
-                recompensa = 0
-                if tipo == 'pesticida':
-                    f, c = pos
-                    flor = self.board.get_celda(f, c)
-                    flor.aplicar_pesticida()
-                    self.mensaje = f"Q-Learning: Pesticida en ({f},{c})"
-
-                    # RECOMPENSA: mas alta si esta cerca de la abeja
-                    dist = abs(f - self.pos_abeja[0]) + abs(c - self.pos_abeja[1])
-                    if dist <= 1: recompensa = 10
-                    elif dist <= 2: recompensa = 5
-                    else: recompensa = -1
-
-                    accion_realizada = True
-
-                elif tipo == 'obstaculo':
-                    exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
-                    if exito:
-                        self.mensaje = f"Q-Learning: Obstacle en ({pos[0]},{pos[1]})"
-                        # RECOMPENSA: bloquear camino
-                        recompensa = 2
-                        accion_realizada = True
-                    else:
-                        recompensa = -5 # Acion ilegal
-
-                # Observamos el nuevo estado S' y actualizamos la Q-table
-                nuevo_estado = self.q_agent.obtener_estado(self.board, self.pos_abeja)
-                # Obtenemos las futuras acciones aproximadas
-                nuevas_acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
-
-                self.q_agent.update(estado_actual, accion, recompensa, nuevo_estado, nuevas_acciones)
-
-            # Guardamos las estadísticas
-            self.tiempo_calculo_ia = time.time() - inicio
-            self.nodos_explorados = self.ai.nodos_explorados
-
-            # === CÁLCULO DEL ERROR USANDO MÉTODO DE HUMANIDAD ===
-            # A) Distancia entre NUEVO PESTICIDA y ABEJA
-            dist_pesticida_abeja = self.humanidad_agente.distancia_chebyshev(pos, self.pos_abeja)
-
-            # B) Distancia entre ABEJA y FLOR MÁS CERCANA (VIVA)
-            flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
-            dist_flor_cercana = 0
-            if flores_vivas:
-                distancias = [self.humanidad_agente.distancia_chebyshev(p, self.pos_abeja) for p in flores_vivas]
-                dist_flor_cercana = min(distancias)
-
-            # C) El Error es la diferencia
-            self.ia_error.append(abs(dist_pesticida_abeja - dist_flor_cercana))
-            self.calculando_ia = False
-
+            accion_realizada = self._ejecutar_logica_qlearning(acciones)
         else:
-            # ===== MODO SIMPLE: IA BÁSICA =====
-            acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+            accion_realizada = self._ejecutar_logica_basica(acciones)
 
-            for tipo, pos in acciones:
-                if tipo == 'pesticida':
-                    f, c = pos
-                    flor = self.board.get_celda(f, c)
-                    flor.aplicar_pesticida()
-                    self.mensaje = f"¡ALERTA! Pesticida en ({f},{c})"
-                    accion_realizada = True
-                    break
-                elif tipo == 'obstaculo':
-                    # Usamos el método de humanidad que maneja el límite de 4 obstáculos
-                    exito = self.humanidad_agente.colocar_obstaculo(self.board, pos)
-                    if exito:
-                        self.mensaje = f"¡CUIDADO! Obstáculo en ({pos[0]},{pos[1]})"
-                        accion_realizada = True
-                        break
+        self.tiempo_calculo_ia = time.time() - start_time
+        self.calculando_ia = False
 
         if not accion_realizada:
             self.mensaje = "La humanidad observa..."
 
-        # Clima y eventos
-        if self.turno % 4 == 0:
-            self.eventos_azar.generar_evento_clima()
-            self.clima_actual = self.eventos_azar.clima_actual
+        self._procesar_eventos_azar()
+        self._verificar_estado_juego()
 
-            # Ajustamos el factor de aleatoriedad de A* según el clima
-            if self.clima_actual == "Lluvia":
-                self.factor_random = 0.8  # Más ruido: peor navegación
-            elif self.clima_actual == "Sol":
-                self.factor_random = 0.25  # Menos ruido: navegación más estable
-            else:
-                self.factor_random = 0.5  # Valor base en clima normal
+    def _ejecutar_logica_expectimax(self, acciones):
+        if not acciones: return False
 
-            self.eventos_azar.aplicar_efecto_clima(self.board)
+        self.ai.nodos_explorados = 0
+
+        estado_base = GameState(self.board, self.abeja, self.pos_abeja,
+                                self.humanidad_agente, self.eventos_azar, self.turno)
+
+        # Calculamos la valoración superficial (sin pensar) del estado actual
+        valor_estatico = self.heuristica.evaluar(estado_base)
+
+        mejor_accion = None
+        peor_valor_para_abeja = float('inf')
+
+        for accion in acciones:
+            estado_sim = estado_base.clonar()
+            estado_sim.humanidad.ejecutar_accion(estado_sim.tablero, accion, estado_sim.pos_abeja)
+
+            valor = self.ai._expectimax(estado_sim, 0, 'CHANCE')
+
+            if valor < peor_valor_para_abeja:
+                peor_valor_para_abeja = valor
+                mejor_accion = accion
+
+        self.nodos_explorados = self.ai.nodos_explorados
+
+        if mejor_accion:
+            self._aplicar_accion_humanidad(mejor_accion, "Expectimax")
+
+            # El "Error" es la diferencia entre lo que parecía (estático) y lo que calculó (profundo)
+            # Nota: usamos abs() para ver la magnitud del cambio de opinión
+            diferencia_juicio = abs(valor_estatico - peor_valor_para_abeja)
+            self.ia_error.append(diferencia_juicio)
+
+            return True
+        return False
+
+    def _ejecutar_logica_qlearning(self, acciones):
+        self.nodos_explorados = 0
+
+        estado_s = self.q_agent.obtener_estado(self.board, self.pos_abeja, self.abeja)
+        accion = self.q_agent.escoger_accion(estado_s, acciones)
+
+        if accion:
+            self._aplicar_accion_humanidad(accion, "Q-Learning")
+            recompensa = self._calcular_recompensa_qlearning(accion)
+
+            estado_s_prime = self.q_agent.obtener_estado(self.board, self.pos_abeja, self.abeja)
+            nuevas_acciones = self.humanidad_agente.obtener_acciones_validas(self.board, self.pos_abeja)
+
+            # CAPTURAMOS EL ERROR AQUÍ
+            td_error = self.q_agent.update(estado_s, accion, recompensa, estado_s_prime, nuevas_acciones)
+
+            # Lo guardamos para la gráfica/stats (sobrescribiendo el cálculo de distancia anterior)
+            self.ia_error.append(td_error)
+            return True
+        return False
+
+    def _ejecutar_logica_basica(self, acciones):
+        self.nodos_explorados = 0
+        for accion in acciones:
+            tipo, _ = accion
+            if tipo == 'pesticida':
+                self._aplicar_accion_humanidad(accion, "IA Básica")
+                return True
+
+        if acciones:
+            self._aplicar_accion_humanidad(acciones[0], "IA Básica")
+            return True
+        return False
+
+    def _aplicar_accion_humanidad(self, accion, nombre_ia):
+        self.humanidad_agente.ejecutar_accion(self.board, accion, self.pos_abeja)
+        tipo, pos = accion
+        self.mensaje = f"{nombre_ia}: {tipo.capitalize()} en {pos}"
+
+    def _calcular_recompensa_qlearning(self, accion):
+        tipo, pos = accion
+        if tipo == 'pesticida':
+            dist = self.humanidad_agente.distancia_chebyshev(pos, self.pos_abeja)
+            if dist <= 1: return 10
+            if dist <= 2: return 5
+            return -1
+        if tipo == 'obstaculo':
+            return 2
+        return 0
+
+    def _calcular_y_registrar_error(self, pos_accion):
+        dist_accion = self.humanidad_agente.distancia_chebyshev(pos_accion, self.pos_abeja)
+        flores = [p for p, fl in self.board.flores if fl.esta_viva()]
+        dist_flor = 0
+        if flores:
+            dist_flor = min(self.humanidad_agente.distancia_chebyshev(p, self.pos_abeja) for p in flores)
+
+        error = abs(dist_accion - dist_flor)
+        self.ia_error.append(error)
+
+    def _procesar_eventos_azar(self):
+        res = self.eventos_azar.ejecutar_ciclo(self.board, self.turno)
+
+        if res:
+            self.clima_actual = res["clima"]
+            nuevas = res["nuevas_flores"]
+
             self.mensaje_evento_clima = f"Clima: {self.clima_actual.upper()}"
+            if nuevas > 0: self.mensaje_evento_clima += f" (+{nuevas} Flores)"
+
             self.mostrar_evento_clima = True
             self.timer_evento_clima = 0
 
-            # Reproducción
-            nuevas = 0
-            for pos_f, flor in self.board.flores[:]:
-                if flor.polinizacion == 1 and flor.vida > 0:
-                    exito, _ = self.eventos_azar.intentar_reproduccion(self.board, pos_f)
-                    if exito: nuevas += 1
-            if nuevas: self.mensaje_evento_clima += f" (+{nuevas} Flores)"
+            if self.clima_actual == "Lluvia":
+                self.factor_random = 0.8
+            elif self.clima_actual == "Sol":
+                self.factor_random = 0.25
+            else:
+                self.factor_random = 0.5
 
-        # Miramos si ha acabado la partida
+    def _verificar_estado_juego(self):
         fin, res, msg = self.game_manager.verificar_condiciones_finalizacion(self.board, self.abeja)
         if fin:
             self.game_over = True
@@ -1067,155 +432,397 @@ class BeeGameGUI:
         else:
             self.turno_jugador = True
 
-    def escoger_accion(self, estado):
-        acciones = []
-        if random.random() < epsilon:
-            return random.choice(acciones)
-        else:
-            return max(self.q_table[estado], key=self.q_table[estado].get)
+    # === BUCLE PRINCIPAL Y EVENTOS ===
 
-    def actualizar_q_table(self, estado, accion, recompensa, next_estado):
-        antiguo_val = self.q_table[estado][accion]
-        futuro_max = max(self.q_table[next_estado].values())
+    def run(self):
+        running = True
+        while running:
+            # Eventos Pygame
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self._manejar_clic(event.button, pygame.mouse.get_pos())
 
-        objetivo = recompensa + gamma * futuro_max
-        new_val = antiguo_val + alpha * (objetivo - antiguo_val)
+            # Actualización Lógica
+            self._actualizar_animaciones()
 
-        self.q_table[estado][accion] = new_val
-        return abs(new_val - antiguo_val)
+            # Dibujado
+            self._dibujar_escena()
 
-    def actualizar_evento_climatico(self):
+            pygame.display.flip()
+            self.clock.tick(60)
+
+        pygame.quit()
+        sys.exit()
+
+    def _manejar_clic(self, boton, pos):
+        if self.mostrar_tooltip_clima:
+            if hasattr(self, 'close_tooltip_rect') and self.close_tooltip_rect.collidepoint(pos):
+                self.mostrar_tooltip_clima = False
+                return
+            self.mostrar_tooltip_clima = False
+            return
+
+        if hasattr(self, 'help_clima_rect') and self.help_clima_rect.collidepoint(pos):
+            self.mostrar_tooltip_clima = not self.mostrar_tooltip_clima
+            return
+
+        # Clic izquierdo (acciones)
+        if boton == 1:
+            if 'reiniciar' in self.botones and self.botones['reiniciar'].collidepoint(pos):
+                self._inicializar_juego()
+                return
+
+            if self.turno_jugador and not self.game_over:
+                for key, rect in self.botones.items():
+                    if rect.collidepoint(pos):
+                        if key == 'recoger':
+                            self.recoger_nectar()
+                        elif key == 'descansar':
+                            self.accion_descansar()
+                        elif key == 'ir_a_la_colmena':
+                            self.accion_volver_colmena_a_star()
+                        elif key == 'cambiar_IA':
+                            self.usar_expectimax = not self.usar_expectimax
+                            self.usar_qlearning = not self.usar_expectimax
+                            # Feedback visual inmediato o log
+                            self.mensaje = f"IA Cambiada a {'Expectimax' if self.usar_expectimax else 'Q-Learning'}"
+                        return
+
+                celda = self._obtener_coordenada_tablero(pos)
+                if celda: self.mover_abeja(celda)
+
+        # Clic derecho (selección)
+        elif boton == 3:
+            celda = self._obtener_coordenada_tablero(pos)
+            if celda:
+                f, c = celda
+                if self.board.es_flor(f, c) and self.board.get_celda(f, c).esta_viva():
+                    self.celda_seleccionada = celda
+                else:
+                    self.celda_seleccionada = None
+
+    def _actualizar_animaciones(self):
+        # Animación A*
+        if self.moviendo_a_star:
+            self.timer_a_star += 1
+            if self.timer_a_star >= self.velocidad_a_star:
+                self.timer_a_star = 0
+                if self.paso_a_star < len(self.ruta_a_star):
+                    dest = self.ruta_a_star[self.paso_a_star]
+                    if self.abeja.mover(self.board, self.pos_abeja, dest):
+                        self.pos_abeja = dest
+                        self.paso_a_star += 1
+                    else:
+                        self.moviendo_a_star = False
+                else:
+                    self.moviendo_a_star = False
+                    if self.board.es_colmena(*self.pos_abeja):
+                        self.abeja.descargar_nectar_en_colmena(self.board, self.pos_abeja)
+                        self.abeja.recuperar_energia_en_colmena(self.board, self.pos_abeja)
+                    self.finalizar_turno_jugador()
+
+        # Banner Clima
         if self.mostrar_evento_clima:
             self.timer_evento_clima += 1
             if self.timer_evento_clima > self.duracion_evento_clima:
                 self.mostrar_evento_clima = False
 
-    def reiniciar_juego(self):
-        # Guardamos el objetivo actual
-        objetivo = self.game_manager.nectar_objetivo
+    def _obtener_coordenada_tablero(self, pos):
+        x, y = pos
+        if x < self.BOARD_WIDTH and y < self.BOARD_HEIGHT:
+            return (y // self.CELL_SIZE, x // self.CELL_SIZE)
+        return None
 
-        # Reiniciamos los componentes
-        self.board = Board(self.board.filas, self.board.columnas)
-        self.board.inicializar_tablero(num_flores=12, num_obstaculos=2)
-        self.abeja = Bee(vida=100)
-        self.pos_abeja = (self.board.pos_colmena[0] - 1, self.board.pos_colmena[1])
+    # === DIBUJADO ===
 
-        self.humanidad_agente = Humanidad()
-        self.eventos_azar = ChanceEvents()
-        self.game_manager = GameManager(nectar_objetivo=objetivo)
+    def _dibujar_escena(self):
+        self.screen.fill((255, 255, 255))
+        self.dibujar_tablero()
+        self.dibujar_panel_info()
+        self.dibujar_botones()
+        self.dibujar_evento_climatico()
+        if self.mostrar_tooltip_clima:
+            self.dibujar_tooltip_clima()
+        if self.game_over:
+            self._dibujar_game_over()
 
-        # Reiniciamos las variables de control
-        self.turno = 0
-        self.mensaje = "Juego reiniciado."
-        self.clima_actual = "Normal"
-        self.game_over = False
-        self.resultado = None
-        self.celda_seleccionada = None
-        self.turno_jugador = True
+    def dibujar_tablero(self):
+        for f in range(self.board.filas):
+            for c in range(self.board.columnas):
+                x, y = c * self.CELL_SIZE, f * self.CELL_SIZE
 
-        self.flores_muertas_timer = {}
-        self.moviendo_a_star = False
-        self.ruta_a_star = []
+                # Fondo (patrón ajedrez)
+                color = C_CESPED_CLARO if (f + c) % 2 == 0 else C_CESPED_OSCURO
+                pygame.draw.rect(self.screen, color, (x, y, self.CELL_SIZE, self.CELL_SIZE))
 
-        # Reiniciamos los stats
-        self.nodos_explorados = 0
-        self.tiempo_calculo_ia = 0
-        self.ia_error = [0]
+                # Entidades
+                cx, cy = x + self.CELL_SIZE // 2, y + self.CELL_SIZE // 2
+                if self.board.es_colmena(f, c):
+                    self.dibujar_colmena(cx, cy)
+                elif self.board.es_obstaculo(f, c):
+                    self.dibujar_obstaculo(cx, cy)
+                elif self.board.es_flor(f, c):
+                    self.dibujar_flor(cx, cy, self.board.get_celda(f, c), (f, c))
 
-    def run(self):
-        running = True
-        while running:
-            # Eventos
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT: running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE: running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()
-                    if event.button == 1: # Clic izquierdo
-                        # Check botón cerrar tooltip (si está visible)
-                        if self.mostrar_tooltip_clima and hasattr(self, 'close_tooltip_rect') and self.close_tooltip_rect.collidepoint(pos):
-                            self.mostrar_tooltip_clima = False
-                            continue
+                # Abeja
+                if (f, c) == self.pos_abeja:
+                    self.dibujar_abeja(cx, cy)
 
-                        # Check botón de ayuda clima
-                        if hasattr(self, 'help_clima_rect') and self.help_clima_rect.collidepoint(pos):
-                            self.mostrar_tooltip_clima = not self.mostrar_tooltip_clima
-                            continue
+                # Selección
+                if self.celda_seleccionada == (f, c):
+                    s = pygame.Surface((self.CELL_SIZE, self.CELL_SIZE), pygame.SRCALPHA)
+                    s.fill(C_SELECCION)
+                    self.screen.blit(s, (x, y))
+                    pygame.draw.rect(self.screen, (255, 255, 255), (x, y, self.CELL_SIZE, self.CELL_SIZE), 3)
 
-                        # Si el tooltip está visible, cerrar con cualquier clic fuera
-                        if self.mostrar_tooltip_clima:
-                            self.mostrar_tooltip_clima = False
-                            continue
+        self._dibujar_texto_instrucciones()
 
-                        # Check boton de reinicio
-                        clicked_btn = False
-                        if 'reiniciar' in self.botones and self.botones['reiniciar'].collidepoint(pos):
-                            self.reiniciar_juego()
-                            clicked_btn = True
+    def _dibujar_texto_instrucciones(self):
+        txt = self.font_normal.render("Clic Izq: Mover | Clic Der: Seleccionar", True, C_TEXTO_PRINCIPAL)
+        self.screen.blit(txt, (self.BOARD_WIDTH // 2 - txt.get_width() // 2, self.BOARD_HEIGHT + 15))
 
-                        # Check el resto de botones
-                        if self.turno_jugador and not self.game_over:
-                            for key, rect in self.botones.items():
-                                if key == 'reiniciar': continue  # Ya revisado
-                                if rect.collidepoint(pos):
+    # === MÉTODOS DE DIBUJO DETALLADOS ===
 
-                                    if key == 'recoger': self.recoger_nectar()
-                                    elif key == 'descansar': self.accion_descansar()
-                                    elif key == 'ir_a_la_colmena': self.accion_volver_colmena_a_star()
-                                    elif key == 'cambiar_IA': self.accion_ia()
-                                    if key != 'recoger':self.celda_seleccionada = None
-                                    clicked_btn = True
-                                    break
+    def dibujar_colmena(self, cx, cy):
+        radio = self.CELL_SIZE // 2.5
+        pygame.draw.circle(self.screen, C_COLMENA_BASE, (cx, cy), radio)
+        # Capas de la colmena
+        for i in range(3):
+            offset = i * 8
+            rect_w = radio * 1.5
+            r_rect = pygame.Rect(cx - rect_w // 2, cy - 15 + offset, rect_w, 10)
+            pygame.draw.rect(self.screen, C_COLMENA_DETALLE, r_rect, border_radius=5)
+        # Entrada
+        pygame.draw.circle(self.screen, (50, 30, 0), (cx, cy + 10), 8)
 
-                        # Si no es botón, es tablero
-                        if not clicked_btn:
-                            celda = self.obtener_celda_clic(pos)
-                            if celda and self.turno_jugador:
-                                self.mover_abeja(celda)
+    def dibujar_obstaculo(self, cx, cy):
+        # Valla detallada
+        num_postes = 3
+        ancho_poste = 15
+        alto_poste = 62
+        espaciado = 4
+        ancho_total = (ancho_poste * num_postes) + (espaciado * (num_postes - 1))
 
-                    elif event.button == 3:  # Clic derecho
-                        celda = self.obtener_celda_clic(pos)
+        for i in range(num_postes):
+            x = cx - ancho_total // 2 + i * (ancho_poste + espaciado) + 7
+            r = pygame.Rect(x - ancho_poste // 2, cy - alto_poste // 2, ancho_poste, alto_poste)
+            pygame.draw.rect(self.screen, C_OBSTACULO_MADERA, r)
 
-                        if celda:  # Primero verificamos que hemos clicado en una celda válida
-                            f, c = celda
+        # Barras transversales
+        pygame.draw.rect(self.screen, C_OBSTACULO_BARRAS,
+                         (cx - ancho_total // 2 - 5, cy - alto_poste // 4, ancho_total + 10, 10))
+        pygame.draw.rect(self.screen, C_OBSTACULO_BARRAS,
+                         (cx - ancho_total // 2 - 5, cy + alto_poste // 4, ancho_total + 10, 10))
 
-                            # Solo permitimos seleccionar si es una flor y está viva
-                            if self.board.es_flor(f, c) and self.board.get_celda(f, c).vida > 0:
-                                self.celda_seleccionada = celda
-                            else:
-                                # Si clicas en algo que no es flor, deseleccionamos
-                                self.celda_seleccionada = None
+    def dibujar_flor(self, cx, cy, flor, pos):
+        # Flor muerta / marchita
+        if not flor.esta_viva():
+            if pos not in self.flores_muertas_timer:
+                self.flores_muertas_timer[pos] = self.turno
 
-            # Updates
-            if self.moviendo_a_star: self.actualizar_a_star()
-            self.actualizar_evento_climatico()
+            turnos_muerta = self.turno - self.flores_muertas_timer[pos]
+            if turnos_muerta > 2: return  # Desaparece
 
-            # Render
-            self.screen.fill((255, 255, 255)) # Fondo base
-            self.dibujar_tablero()
-            self.dibujar_panel_info()
-            self.dibujar_botones()
-            self.dibujar_evento_climatico()
+            pygame.draw.line(self.screen, (100, 80, 50), (cx, cy), (cx, cy + 20), 3)  # Tallo
+            pygame.draw.circle(self.screen, (100, 80, 50), (cx, cy - 5), 8)  # Flor muerta
 
-            # Dibujar tooltip clima AL FINAL para que esté por encima de todo
-            if self.mostrar_tooltip_clima:
-                self.dibujar_tooltip_clima(0, 0)
+            if turnos_muerta >= 2:
+                txt = self.font_small.render("X", True, (50, 0, 0))
+                self.screen.blit(txt, (cx - 5, cy - 25))
+            return
 
-            if self.game_over:
-                # Overlay simple Game Over
-                s = pygame.Surface((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), pygame.SRCALPHA)
-                s.fill((0,0,0,180))
-                self.screen.blit(s, (0,0))
-                color_res = C_CESPED_CLARO if self.resultado == "VICTORIA" else C_VIDA
-                txt = self.font_title.render(self.mensaje, True, color_res)
-                self.screen.blit(txt, (self.WINDOW_WIDTH//2 - txt.get_width()//2, self.WINDOW_HEIGHT//2))
+        if pos in self.flores_muertas_timer: del self.flores_muertas_timer[pos]
 
-            pygame.display.flip()
-            self.clock.tick(60)
-        pygame.quit()
-        sys.exit()
+        pygame.draw.line(self.screen, (50, 150, 50), (cx, cy + 25), (cx, cy), 4)  # Tallo
 
-if __name__ == "__main__":
-    juego = BeeGameGUI(filas=9, columnas=9, nectar_objetivo=100)
-    juego.run()
+        # Pétalos
+        color = C_FLOR_SANA
+        if flor.esta_polinizada(): color = C_FLOR_POLINIZADA
+        if flor.pesticidas >= 2:
+            color = C_PESTICIDA_GRAVE
+        elif flor.pesticidas >= 1:
+            color = C_PESTICIDA_LEVE
+
+        radio_petalo = 12
+        for i in range(5):
+            angle = (2 * math.pi / 5) * i
+            px = cx + math.cos(angle) * 15
+            py = cy + math.sin(angle) * 15
+            pygame.draw.circle(self.screen, color, (px, py), radio_petalo)
+            pygame.draw.circle(self.screen, (200, 200, 200), (px, py), radio_petalo, 1)  # Borde
+
+        pygame.draw.circle(self.screen, C_FLOR_CENTRO, (cx, cy), 10)
+
+        # Partículas pesticida
+        if flor.pesticidas > 0:
+            for i in range(flor.pesticidas * 3):
+                ox = cx + math.cos(i) * 20
+                oy = cy + math.sin(i) * 20 - 20
+                pygame.draw.circle(self.screen, (255, 50, 50), (ox, oy), 3)
+
+    def dibujar_abeja(self, cx, cy):
+        # Alas
+        offset = math.sin(pygame.time.get_ticks() * 0.02) * 5 if self.moviendo_a_star else 0
+        alas = pygame.Surface((60, 40), pygame.SRCALPHA)
+        pygame.draw.ellipse(alas, C_ABEJA_ALAS, (0, 0, 25, 40))  # Ala izq
+        pygame.draw.ellipse(alas, C_ABEJA_ALAS, (35, 0, 25, 40))  # Ala der
+        self.screen.blit(alas, (cx - 30, cy - 25 + offset))
+
+        # Cuerpo y rayas
+        pygame.draw.rect(self.screen, C_ABEJA_CUERPO, (cx - 15, cy - 12, 30, 24), border_radius=12)
+        pygame.draw.line(self.screen, C_ABEJA_RAYAS, (cx - 5, cy - 12), (cx - 5, cy + 12), 4)
+        pygame.draw.line(self.screen, C_ABEJA_RAYAS, (cx + 5, cy - 12), (cx + 5, cy + 12), 4)
+
+        # Ojos
+        pygame.draw.circle(self.screen, (0, 0, 0), (cx + 8, cy - 4), 3)
+        pygame.draw.circle(self.screen, (0, 0, 0), (cx + 8, cy + 4), 3)
+
+        # Mochila
+        if self.abeja.nectar_cargado > 0:
+            pygame.draw.circle(self.screen, C_NECTAR, (cx - 8, cy), 6)
+
+    def dibujar_evento_climatico(self):
+        """Dibuja un banner notificando el cambio de clima."""
+        if not self.mostrar_evento_clima: return
+
+        overlay = pygame.Surface((self.WINDOW_WIDTH, 80), pygame.SRCALPHA)
+        c = (50, 50, 50, 220)
+        if "Sol" in self.mensaje_evento_clima:
+            c = (255, 200, 0, 220)
+        elif "Lluvia" in self.mensaje_evento_clima:
+            c = (50, 50, 200, 220)
+        overlay.fill(c)
+
+        y = self.WINDOW_HEIGHT // 2 - 40
+        self.screen.blit(overlay, (0, y))
+
+        txt = self.font_title.render(self.mensaje_evento_clima, True, (255, 255, 255))
+        self.screen.blit(txt, (self.WINDOW_WIDTH // 2 - txt.get_width() // 2, y + 25))
+
+    def dibujar_tooltip_clima(self):
+        # Tooltip
+        w, h = 400, 280
+        x = (self.WINDOW_WIDTH - w) // 2
+        y = (self.WINDOW_HEIGHT - h) // 2
+
+        # Fondo y sombra
+        s = pygame.Surface((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), pygame.SRCALPHA)
+        s.fill((0, 0, 0, 150))
+        self.screen.blit(s, (0, 0))
+
+        rect = pygame.Rect(x, y, w, h)
+        pygame.draw.rect(self.screen, (255, 255, 255), rect, border_radius=15)
+
+        # Botón close
+        self.close_tooltip_rect = pygame.Rect(rect.right - 40, rect.top + 10, 30, 30)
+        pygame.draw.circle(self.screen, (200, 50, 50), self.close_tooltip_rect.center, 14)
+        self.screen.blit(self.font_bold.render("X", True, (255, 255, 255)), (rect.right - 35, rect.top + 8))
+
+        # Contenido
+        title = self.font_subtitle.render("Estados del Clima", True, C_TEXTO_PRINCIPAL)
+        self.screen.blit(title, (x + (w - title.get_width()) // 2, y + 20))
+
+        off_y = y + 80
+        info = [
+            ("🌧 Lluvia (10%)", "Limpia pesticidas", (52, 152, 219)),
+            ("☀ Sol (15%)", "+20% Reproducción", (230, 150, 0)),
+            ("☁ Normal (75%)", "Sin efectos", (100, 100, 100))
+        ]
+
+        for titulo, desc, color in info:
+            t = self.font_bold.render(titulo, True, color)
+            d = self.font_small.render(desc, True, C_TEXTO_PRINCIPAL)
+            self.screen.blit(t, (x + 60, off_y))
+            self.screen.blit(d, (x + 60, off_y + 25))
+            off_y += 60
+
+    def dibujar_panel_info(self):
+        rect = pygame.Rect(self.BOARD_WIDTH, 0, self.PANEL_WIDTH, self.WINDOW_HEIGHT)
+        pygame.draw.rect(self.screen, C_FONDO_PANEL, rect)
+
+        x = self.BOARD_WIDTH + 25
+        y = 30
+        self.screen.blit(self.font_title.render("BeeGame IA", True, C_TEXTO_PRINCIPAL), (x, y))
+
+        y += 60
+        self._barra(x, y, "Vida", self.abeja.vida, self.abeja.max_vida, C_VIDA)
+        y += 50
+        self._barra(x, y, "Energía", self.abeja.energia, self.abeja.max_energia, C_ENERGIA)
+        y += 50
+        self._barra(x, y, f"Mochila ({self.abeja.nectar_cargado})", self.abeja.nectar_cargado, self.abeja.capacidad_nectar, C_NECTAR)
+        y += 50
+
+        # === RECUADRO MIEL ===
+        r_miel = pygame.Rect(x, y, 350, 40)
+        pygame.draw.rect(self.screen, (255, 248, 220), r_miel, border_radius=8)
+        pygame.draw.rect(self.screen, C_COLMENA_DETALLE, r_miel, 2, border_radius=8)
+
+        txt_miel = self.font_bold.render(
+            f"Miel en Colmena: {self.board.nectar_en_colmena} / {self.nectar_objetivo_init}", True, C_COLMENA_DETALLE)
+        self.screen.blit(txt_miel, (x + 20, y + 10))
+
+        y += 60
+        self.dibujar_widget_clima(x, y)
+        y += 80
+        self.dibujar_widget_ia(x, y)
+        y += 90
+        self.dibujar_log(x, y)
+
+    def _barra(self, x, y, texto, val, max_val, color):
+        self.screen.blit(self.font_small.render(texto, True, C_TEXTO_SECUNDARIO), (x, y))
+        pygame.draw.rect(self.screen, (230, 230, 230), (x, y + 20, 350, 10), border_radius=5)
+        if max_val > 0:
+            w = int((val / max_val) * 350)
+            pygame.draw.rect(self.screen, color, (x, y + 20, w, 10), border_radius=5)
+
+    def dibujar_widget_clima(self, x, y):
+        pygame.draw.rect(self.screen, (255, 255, 255), (x, y, 350, 60), border_radius=10)
+        c = C_TEXTO_PRINCIPAL
+        if self.clima_actual == "Lluvia":
+            c = C_ENERGIA
+        elif self.clima_actual == "Sol":
+            c = (200, 150, 0)
+
+        self.screen.blit(self.font_bold.render(f"Clima: {self.clima_actual}", True, c), (x + 20, y + 20))
+
+        # Botón ayuda
+        self.help_clima_rect = pygame.Rect(x + 310, y + 15, 30, 30)
+        pygame.draw.circle(self.screen, (150, 150, 255), self.help_clima_rect.center, 15)
+        self.screen.blit(self.font_bold.render("?", True, (255, 255, 255)), (x + 319, y + 18))
+
+    def dibujar_widget_ia(self, x, y):
+        pygame.draw.rect(self.screen, (255, 255, 255), (x, y, 350, 70), border_radius=10)
+        t = "IA Expectimax" if self.usar_expectimax else "IA Q-Learning"
+        self.screen.blit(self.font_bold.render(t, True, C_TEXTO_PRINCIPAL), (x + 20, y + 15))
+
+        # Stats
+        stats = f"Nodos: {self.nodos_explorados} | T: {self.tiempo_calculo_ia * 1000:.0f}ms | Err: {mean(self.ia_error):.1f}"
+        self.screen.blit(self.font_small.render(stats, True, C_TEXTO_SECUNDARIO), (x + 20, y + 40))
+
+    def dibujar_log(self, x, y):
+        pygame.draw.rect(self.screen, (255, 255, 255), (x, y, 350, 80), border_radius=5)
+        txt = self.font_small.render(self.mensaje[:45], True, C_TEXTO_PRINCIPAL)
+        self.screen.blit(txt, (x + 10, y + 10))
+
+    def dibujar_botones(self):
+        m = pygame.mouse.get_pos()
+        for k, r in self.botones.items():
+            act = r.collidepoint(m)
+            c = C_BOTON_HOVER if act else (240, 240, 240)
+            pygame.draw.rect(self.screen, c, r, border_radius=5)
+            pygame.draw.rect(self.screen, (200, 200, 200), r, 2, border_radius=5)
+            t = self.font_bold.render(k.replace("_", " ").upper(), True, C_TEXTO_PRINCIPAL)
+            self.screen.blit(t, (r.centerx - t.get_width() // 2, r.centery - t.get_height() // 2))
+
+    def _dibujar_game_over(self):
+        s = pygame.Surface((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), pygame.SRCALPHA)
+        s.fill((0, 0, 0, 200))
+        self.screen.blit(s, (0, 0))
+
+        color = C_CESPED_CLARO if self.resultado == self.game_manager.RES_VICTORIA else C_VIDA
+        txt = self.font_title.render(self.mensaje, True, color)
+        self.screen.blit(txt, (self.WINDOW_WIDTH // 2 - txt.get_width() // 2, self.WINDOW_HEIGHT // 2))

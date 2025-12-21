@@ -1,77 +1,77 @@
-class Flower():
+class Flower:
     """
-    Representa una flor en el tablero del juego.
-    Las flores tienen vida, nivel de polinización y contador de pesticidas.
-    Mueren cuando el contador de pesticidas llega a 3.
+    Representa una flor.
+    Gestiona su ciclo de vida, estado de polinización y niveles de contaminación.
     """
-    def __init__(self, vida=100, polinizacion=0, pesticidas=0):
+
+    # Constantes de clase
+    MAX_PESTICIDAS = 3
+    DAÑO_POR_NIVEL = {0: 0, 1: 5, 2: 10, 3: 15}
+
+    def __init__(self, vida=100):
         self.vida = vida
         self.max_vida = vida
-        self.polinizacion = polinizacion  # 0: no polinizada, 1: polinizada
-        self.pesticidas = pesticidas
+        self.es_polinizada = False
+        self.pesticidas = 0
         self.viva = True
-        self.turnos_muerta = 0  # Contador de turnos desde que murió
-        
-    def aplicar_pesticida(self):
-        """Aplica una unidad de pesticida. Mata la flor si llega a 3."""
-        if self.viva:
-            self.pesticidas += 1
-            if self.pesticidas >= 3:
-                self.matar()
-    
-    def reducir_pesticida(self, cantidad=1):
-        """Reduce el contador de pesticidas (efecto de lluvia)."""
-        self.pesticidas = max(0, self.pesticidas - cantidad)
-    
-    def polinizar(self):
-        """Marca la flor como polinizada."""
-        if self.viva:
-            self.polinizacion = 1
-    
+        self.turnos_muerta = 0
+
+    def esta_viva(self):
+        """Indica si la flor sigue viva."""
+        return self.viva
+
     def esta_polinizada(self):
-        """Retorna True si la flor está polinizada."""
-        return self.polinizacion == 1
-    
+        """Indica si la flor ha sido polinizada."""
+        return self.es_polinizada
+
+    def polinizar(self):
+        """Marca la flor como polinizada si está viva."""
+        if self.viva:
+            self.es_polinizada = True
+
+    def aplicar_pesticida(self):
+        """Incrementa nivel de pesticida. Si alcanza el máximo, la flor muere."""
+        if not self.viva:
+            return
+
+        self.pesticidas += 1
+        if self.pesticidas >= self.MAX_PESTICIDAS:
+            self.matar()
+
+    def reducir_pesticida(self, cantidad=1):
+        """Reduce el nivel de pesticida (ej. por lluvia)."""
+        self.pesticidas = max(0, self.pesticidas - cantidad)
+
+    def get_daño_pesticida(self):
+        """
+        Retorna el daño que esta flor causa a la abeja por contacto.
+        Basado en el nivel actual de pesticida.
+        """
+        # Devuelve el valor del diccionario o 15 si supera el índice (máximo daño)
+        return self.DAÑO_POR_NIVEL.get(self.pesticidas, 15)
+
     def matar(self):
-        """Mata la flor."""
+        """Finaliza el ciclo de vida de la flor."""
         self.viva = False
         self.vida = 0
         self.turnos_muerta = 0
-    
-    def esta_viva(self):
-        """Retorna True si la flor está viva."""
-        return self.viva
-    
+
+    def incrementar_turno_muerta(self):
+        """Avanza el contador de descomposición si la flor está muerta."""
+        if not self.viva:
+            self.turnos_muerta += 1
+
+    def debe_eliminarse(self):
+        """Determina si la flor muerta debe ser retirada del tablero."""
+        return not self.viva and self.turnos_muerta >= 1
+
+    # Métodos de manipulación de vida (mantenidos por compatibilidad con lógica externa)
     def bajar_vida(self, daño):
-        """Reduce la vida de la flor."""
         if self.viva:
             self.vida -= daño
             if self.vida <= 0:
                 self.matar()
-    
-    def subir_vida(self, cura):
-        """Incrementa la vida de la flor."""
-        if self.viva:
-            self.vida += cura
-            if self.vida > self.max_vida:
-                self.vida = self.max_vida
 
-    def incrementar_turno_muerta(self):
-        """Incrementa el contador de turnos muerta."""
-        if not self.viva:
-            self.turnos_muerta += 1
-    
-    def debe_eliminarse(self):
-        """Retorna True si la flor muerta debe eliminarse (después de 1 turno)."""
-        return not self.viva and self.turnos_muerta >= 1
-    
-    def get_daño_pesticida(self):
-        """Retorna el daño que causa la flor según su nivel de pesticida."""
-        if self.pesticidas == 0:
-            return 0
-        elif self.pesticidas == 1:
-            return 5
-        elif self.pesticidas == 2:
-            return 10
-        else:  # 3 o más
-            return 15
+    def subir_vida(self, cura):
+        if self.viva:
+            self.vida = min(self.max_vida, self.vida + cura)

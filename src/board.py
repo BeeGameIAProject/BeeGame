@@ -1,169 +1,154 @@
 import random
 from .flower import Flower
 
-class Board():
+class Board:
     """
-    Representa el tablero del juego con dimensiones N×N.
+    Representa el tablero del juego (Grid).
     Contiene la colmena, flores, obstáculos y gestiona el estado del juego.
     """
+
     def __init__(self, filas=10, columnas=10):
         self.filas = filas
         self.columnas = columnas
         self.grid = [[None for _ in range(columnas)] for _ in range(filas)]
-        self.pos_colmena = None  # Posición de la colmena
-        self.flores = []  # Lista de flores en el tablero
-        self.obstaculos = []  # Lista de posiciones con obstáculos
-        self.nectar_en_colmena = 0  # Néctar acumulado en la colmena
-        self.turno = 0  # Contador de turnos
-        
-    def fila(self):
-        return self.filas
-    
-    def columna(self):
-        return self.columnas
-    
+
+        # Estado del juego
+        self.pos_colmena = None
+        self.flores = []  # Lista de tuplas ((r, c), objeto_flor)
+        self.obstaculos = []  # Lista de tuplas (r, c)
+        self.nectar_en_colmena = 0
+        self.turno = 0
+
     def inicializar_tablero(self, num_flores=15, num_obstaculos=5, pos_colmena=None):
         """
-        Inicializa el tablero con la colmena, flores y obstáculos.
-        
-        Args:
-            num_flores: Número de flores a colocar
-            num_obstaculos: Número de obstáculos a colocar
-            pos_colmena: Posición de la colmena (si es None, se coloca en el centro)
+        Reinicia y puebla el tablero de forma segura usando posiciones aleatorias únicas.
         """
-        # Limpiamos el tablero
+        # Reiniciar estado
         self.grid = [[None for _ in range(self.columnas)] for _ in range(self.filas)]
         self.flores = []
         self.obstaculos = []
-        
-        # Colocamos la colmena
+
+        # Colocar Colmena
         if pos_colmena is None:
             self.pos_colmena = (self.filas // 2, self.columnas // 2)
         else:
             self.pos_colmena = pos_colmena
         self.grid[self.pos_colmena[0]][self.pos_colmena[1]] = "COLMENA"
 
-        # Reservamos la posición inicial de la abeja (encima de la colmena)
+        # Generar todas las coordenadas posibles para evitar colisiones
+        # Reservamos la posición de inicio de la abeja (encima de la colmena)
         pos_abeja_inicio = (self.pos_colmena[0] - 1, self.pos_colmena[1])
 
-        # Colocamos flores
-        flores_colocadas = 0
-        while flores_colocadas < num_flores:
-            fila = random.randint(0, self.filas - 1)
-            col = random.randint(0, self.columnas - 1)
+        todas_posiciones = [
+            (r, c) for r in range(self.filas) for c in range(self.columnas)
+        ]
 
-            # Evitamos colocar en la posición reservada para la abeja
-            if (fila, col) == pos_abeja_inicio:
-                continue
+        # Eliminar posiciones reservadas si existen en la lista
+        if self.pos_colmena in todas_posiciones:
+            todas_posiciones.remove(self.pos_colmena)
+        if pos_abeja_inicio in todas_posiciones:
+            todas_posiciones.remove(pos_abeja_inicio)
 
-            if self.grid[fila][col] is None:
-                flor = Flower()
-                self.grid[fila][col] = flor
-                self.flores.append(((fila, col), flor))
-                flores_colocadas += 1
-        
-        # Colocamos obstáculos
-        obstaculos_colocados = 0
-        while obstaculos_colocados < num_obstaculos:
-            fila = random.randint(0, self.filas - 1)
-            col = random.randint(0, self.columnas - 1)
-            
-            # Evitamos colocar en la posición reservada para la abeja
-            if (fila, col) == pos_abeja_inicio:
-                continue
+        # Barajar para aleatoriedad
+        random.shuffle(todas_posiciones)
 
-            if self.grid[fila][col] is None:
-                self.grid[fila][col] = "OBSTACULO"
-                self.obstaculos.append((fila, col))
-                obstaculos_colocados += 1
-    
+        # Colocar Flores
+        # Nos aseguramos de no generar más flores de las que caben
+        count_flores = min(num_flores, len(todas_posiciones))
+        for _ in range(count_flores):
+            pos = todas_posiciones.pop()
+            flor = Flower()
+            self.grid[pos[0]][pos[1]] = flor
+            self.flores.append((pos, flor))
+
+        # Colocar Obstáculos
+        count_obs = min(num_obstaculos, len(todas_posiciones))
+        for _ in range(count_obs):
+            pos = todas_posiciones.pop()
+            self.grid[pos[0]][pos[1]] = "OBSTACULO"
+            self.obstaculos.append(pos)
+
     def get_celda(self, fila, col):
-        """Retorna el contenido de una celda."""
+        """Retorna el contenido de una celda con seguridad de límites."""
         if 0 <= fila < self.filas and 0 <= col < self.columnas:
             return self.grid[fila][col]
         return None
-    
+
     def es_colmena(self, fila, col):
-        """Verifica si la posición es la colmena."""
         return (fila, col) == self.pos_colmena
-    
+
     def es_obstaculo(self, fila, col):
-        """Verifica si la posición es un obstáculo."""
         return (fila, col) in self.obstaculos
-    
+
     def es_flor(self, fila, col):
-        """Verifica si la posición contiene una flor."""
         celda = self.get_celda(fila, col)
         return isinstance(celda, Flower)
-    
+
     def es_transitable(self, fila, col):
-        """Verifica si la posición es transitable (no obstáculo)."""
+        """
+        Determina si la abeja puede entrar en la celda.
+        Transitable si: Vacío, Flor (viva/muerta) o Colmena.
+        No transitable si: Obstáculo o Fuera de límites.
+        """
         if not (0 <= fila < self.filas and 0 <= col < self.columnas):
             return False
 
         celda = self.get_celda(fila, col)
 
-        # IMPORTANTE: Si es una Flor (viva o muerta), SIEMPRE se puede pasar
-        if isinstance(celda, Flower):
-            return True
+        if celda == "OBSTACULO":
+            return False
 
-        # Si está vacío (None), también se puede pasar
-        if celda is None:
-            return True
+        # En cualquier otro caso se puede pasar
+        return True
 
-        # Solo bloqueamos si es explícitamente un obstaculo
-        return celda != "OBSTACULO"
-    
     def colocar_obstaculo(self, fila, col):
-        """Coloca un obstáculo en la posición especificada."""
+        """Intenta colocar un obstáculo si la celda está vacía."""
         if self.grid[fila][col] is None:
             self.grid[fila][col] = "OBSTACULO"
             self.obstaculos.append((fila, col))
             return True
         return False
-    
+
     def aplicar_pesticida_en(self, fila, col):
-        """Aplica pesticida en una posición con flor."""
+        """Delega la aplicación de pesticida a la flor en la posición."""
         celda = self.get_celda(fila, col)
         if isinstance(celda, Flower):
             celda.aplicar_pesticida()
             return True
         return False
-    
+
     def agregar_nectar_a_la_colmena(self, cantidad):
-        """Agrega néctar a la colmena."""
         self.nectar_en_colmena += cantidad
-    
+
     def get_flores_vivas(self):
-        """Retorna lista de flores vivas en el tablero."""
         return [(pos, flor) for pos, flor in self.flores if flor.esta_viva()]
-    
+
     def contar_flores_vivas(self):
-        """Retorna el número de flores vivas."""
         return len(self.get_flores_vivas())
-    
+
     def incrementar_turno(self):
-        """Incrementa el contador de turnos."""
         self.turno += 1
-        # Incrementamos el contador de flores muertas y las eliminamos si es necesario
         self.limpiar_flores_muertas()
-    
+
     def get_turno(self):
-        """Retorna el turno actual."""
         return self.turno
-    
+
     def limpiar_flores_muertas(self):
-        """Elimina flores muertas que llevan 1 turno muertas."""
-        flores_a_eliminar = []
+        """Gestiona la desaparición de flores muertas tras el tiempo establecido."""
+        # Filtramos la lista
+        flores_vivas_o_recientes = []
+
         for pos, flor in self.flores:
             if not flor.esta_viva():
                 flor.incrementar_turno_muerta()
+
                 if flor.debe_eliminarse():
-                    flores_a_eliminar.append((pos, flor))
-                    # Limpiar del grid
+                    # Eliminar del grid
                     self.grid[pos[0]][pos[1]] = None
-        
-        # Las eliminamos de la lista de flores
-        for item in flores_a_eliminar:
-            if item in self.flores:
-                self.flores.remove(item)
+                    # No la añadimos a la nueva lista (se elimina)
+                    continue
+
+            # Si está viva o muerta pero reciente, se queda
+            flores_vivas_o_recientes.append((pos, flor))
+
+        self.flores = flores_vivas_o_recientes

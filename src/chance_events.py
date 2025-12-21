@@ -1,221 +1,141 @@
 import random
 from .flower import Flower
 
-class ChanceEvents():
+class ChanceEvents:
     """
-    Gestiona los nodos de azar (Chance Nodes) del juego.
-    Incluye sistema de clima y reproducción de flores.
+    Gestiona los eventos aleatorios del entorno: Clima y Reproducción.
+    Actúa como el nodo 'CHANCE' en la lógica del juego.
     """
-    
+
     def __init__(self):
-        # Configuración del clima
-        self.turnos_para_clima = 4  # Cada cuántos turnos ocurre evento climático
-        self.probabilidad_lluvia = 0.10  # 10%
-        self.probabilidad_sol = 0.15  # 15%
-        self.probabilidad_normal = 0.75  # 75%
-        
-        # Configuración de reproducción
-        self.prob_base_reproduccion = 0.20  # 20% base
-        self.bonus_sol_reproduccion = 0.20  # +20% con sol
-        
-        # Estado actual del clima
+        # Configuración de Clima
+        self.frecuencia_clima = 4
+        self.prob_lluvia = 0.10
+        self.prob_sol = 0.15
+
+        # Configuración de Reproducción
+        self.prob_reproduccion_base = 0.20
+        self.bonus_reproduccion_sol = 0.20
+
+        # Estado
         self.clima_actual = "Normal"
-        self.ultimo_evento_clima = 0
-    
-    def debe_activar_clima(self, turno_actual):
-        """Verifica si debe activarse un evento climático este turno."""
-        return turno_actual > 0 and turno_actual % self.turnos_para_clima == 0
-    
-    def generar_evento_clima(self):
-        """
-        Genera un evento climático aleatorio según las probabilidades.
-        Retorna: "Lluvia", "Sol" o "Normal"
-        """
+
+    def debe_activar_evento(self, turno_actual):
+        """Determina si en este turno corresponde ejecutar eventos climáticos."""
+        return turno_actual > 0 and turno_actual % self.frecuencia_clima == 0
+
+    def generar_nuevo_clima(self):
+        """Calcula aleatoriamente el nuevo estado del clima."""
         rand = random.random()
-        
-        if rand < self.probabilidad_lluvia:
+
+        if rand < self.prob_lluvia:
             self.clima_actual = "Lluvia"
-        elif rand < self.probabilidad_lluvia + self.probabilidad_sol:
+        elif rand < self.prob_lluvia + self.prob_sol:
             self.clima_actual = "Sol"
         else:
             self.clima_actual = "Normal"
-        
+
         return self.clima_actual
-    
-    def aplicar_efecto_clima(self, tablero):
-        """
-        Aplica el efecto del clima actual a todas las flores del tablero.
-        
-        Args:
-            tablero: El tablero del juego
-            
-        Returns:
-            Diccionario con estadísticas del efecto
-        """
-        stats = {
-            "clima": self.clima_actual,
-            "flores_afectadas": 0,
-            "pesticidas_reducidos": 0
-        }
-        
+
+    def aplicar_efectos_clima(self, tablero):
+        """Aplica los cambios inmediatos que el clima provoca en el tablero."""
         if self.clima_actual == "Lluvia":
-            # Reducimos 1 unidad de pesticida a todas las flores
-            for pos, flor in tablero.flores:
+            # La lluvia limpia pesticidas
+            for _, flor in tablero.flores:
                 if flor.esta_viva() and flor.pesticidas > 0:
                     flor.reducir_pesticida(1)
-                    stats["flores_afectadas"] += 1
-                    stats["pesticidas_reducidos"] += 1
-        
-        elif self.clima_actual == "Sol":
-            # El efecto del sol se aplica en la reproducción
-            stats["mensaje"] = "Bonificación de +20% a reproducción de flores polinizadas"
-        
-        # El clima Normal no tiene efectos
-        
-        return stats
-    
-    def calcular_probabilidad_reproduccion(self):
-        """
-        Calcula la probabilidad de reproducción actual.
-        Incluye bonificación si hay sol.
-        """
-        prob = self.prob_base_reproduccion
-        
+
+        # Sol y Normal no tienen efectos inmediatos sobre el tablero,
+        # sus efectos son pasivos (probabilidades)
+
+    def obtener_probabilidad_reproduccion(self):
+        """Calcula la probabilidad de reproducción según el clima actual."""
+        prob = self.prob_reproduccion_base
         if self.clima_actual == "Sol":
-            prob += self.bonus_sol_reproduccion
-        
+            prob += self.bonus_reproduccion_sol
         return prob
-    
+
     def intentar_reproduccion(self, tablero, pos_flor):
-        """
-        Intenta reproducir una flor polinizada.
-        
-        Args:
-            tablero: El tablero del juego
-            pos_flor: Posición de la flor polinizada
-            
-        Returns:
-            Tupla (exito, nueva_posicion) donde exito es True si nació una nueva flor
-        """
+        """Intenta reproducir una flor específica en una casilla adyacente vacía."""
         fila, col = pos_flor
         flor = tablero.get_celda(fila, col)
-        
-        # Verificamos que la flor está viva y polinizada
+
+        # Validar estado de la flor
         if not isinstance(flor, Flower) or not flor.esta_viva() or not flor.esta_polinizada():
             return False, None
-        
-        # Calculamos la probabilidad de reproduccion
-        prob_reproduccion = self.calcular_probabilidad_reproduccion()
-        
-        # Vemos si se reproduce o no la flor
-        if random.random() > prob_reproduccion:
+
+        # Tirada de dados
+        if random.random() > self.obtener_probabilidad_reproduccion():
             return False, None
-        
-        # Buscamos una casilla adyacente vacía para la nueva flor
-        casillas_adyacentes = [
-            (fila - 1, col - 1), (fila - 1, col), (fila - 1, col + 1),
-            (fila, col - 1),                       (fila, col + 1),
-            (fila + 1, col - 1), (fila + 1, col), (fila + 1, col + 1)
-        ]
-        
-        # Filtramos casillas válidas y vacías
-        casillas_validas = []
-        for f, c in casillas_adyacentes:
-            if 0 <= f < tablero.filas and 0 <= c < tablero.columnas:
-                if tablero.get_celda(f, c) is None:
-                    casillas_validas.append((f, c))
-        
-        if not casillas_validas:
-            return False, None  # No hay espacio para nueva flor
-        
-        # Elegimos una casilla aleatoria de las validas
-        nueva_pos = random.choice(casillas_validas)
-        
-        # Creamos la nueva flor
+
+        # Buscar espacio libre
+        vecinos = self._obtener_vecinos_vacios(tablero, fila, col)
+
+        if not vecinos:
+            return False, None
+
+        # Crear nueva flor
+        nueva_pos = random.choice(vecinos)
         nueva_flor = Flower()
+
+        # Inserción manual en el tablero
         tablero.grid[nueva_pos[0]][nueva_pos[1]] = nueva_flor
         tablero.flores.append((nueva_pos, nueva_flor))
-        
+
         return True, nueva_pos
-    
-    def procesar_reproduccion_flores(self, tablero):
+
+    def _obtener_vecinos_vacios(self, tablero, fila, col):
+        """Ayudante para encontrar casillas libres alrededor de una posición."""
+        casillas_libres = []
+
+        # 8 direcciones posibles (cambios en fila y columna)
+        direcciones = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0, -1), (0, 1),
+            (1, -1), (1, 0), (1, 1)
+        ]
+
+        for delta_fila, delta_columna in direcciones:
+            nueva_fila = fila + delta_fila
+            nueva_columna = col + delta_columna
+
+            # Verificar que las nuevas coordenadas estén dentro del tablero
+            if 0 <= nueva_fila < tablero.filas and 0 <= nueva_columna < tablero.columnas:
+                # Verificar si la casilla está vacía
+                if tablero.get_celda(nueva_fila, nueva_columna) is None:
+                    casillas_libres.append((nueva_fila, nueva_columna))
+
+        return casillas_libres
+
+    def ejecutar_ciclo(self, tablero, turno_actual):
         """
-        Procesa la reproducción de todas las flores polinizadas en el tablero.
-        
-        Args:
-            tablero: El tablero del juego
-            
-        Returns:
-            Diccionario con estadísticas de reproducción
+        Orquesta el ciclo completo de eventos de azar: Clima -> Efectos -> Reproducción.
+        Llamado al final de los turnos clave.
         """
-        stats = {
-            "flores_polinizadas": 0,
-            "flores_nuevas": 0,
-            "posiciones_nuevas": [],
-            "probabilidad": self.calcular_probabilidad_reproduccion()
+        if not self.debe_activar_evento(turno_actual):
+            return None
+
+        # Cambiar Clima
+        self.generar_nuevo_clima()
+
+        # Efectos inmediatos (ej: lluvia limpia pesticidas)
+        self.aplicar_efectos_clima(tablero)
+
+        # Reproducción
+        nuevas = 0
+        # Iteramos sobre una copia para no romper el bucle al añadir flores
+        flores_actuales = list(tablero.flores)
+
+        for pos, flor in flores_actuales:
+            if flor.esta_polinizada():
+                exito, _ = self.intentar_reproduccion(tablero, pos)
+                if exito:
+                    nuevas += 1
+
+        return {
+            "clima": self.clima_actual,
+            "nuevas_flores": nuevas
         }
-        
-        # Obtenemos flores polinizadas (hacemos copia para evitar modificar durante la iteración)
-        flores_polinizadas = [(pos, flor) for pos, flor in tablero.flores 
-                              if flor.esta_viva() and flor.esta_polinizada()]
-        
-        stats["flores_polinizadas"] = len(flores_polinizadas)
-        
-        # Intentamos la reproducción de cada flor polinizada
-        for pos, flor in flores_polinizadas:
-            exito, nueva_pos = self.intentar_reproduccion(tablero, pos)
-            if exito:
-                stats["flores_nuevas"] += 1
-                stats["posiciones_nuevas"].append(nueva_pos)
-        
-        return stats
-    
-    def ejecutar_eventos_turno(self, tablero, turno_actual):
-        """
-        Ejecuta todos los eventos de azar del turno si corresponde.
-        
-        Args:
-            tablero: El tablero del juego
-            turno_actual: El número del turno actual
-            
-        Returns:
-            Diccionario con información de los eventos ejecutados
-        """
-        resultado = {
-            "evento_clima": False,
-            "clima": None,
-            "stats_clima": None,
-            "stats_reproduccion": None
-        }
-        
-        # Verificamos si toca evento climático
-        if self.debe_activar_clima(turno_actual):
-            resultado["evento_clima"] = True
-            
-            # Generamos y aplicamos el clima
-            clima = self.generar_evento_clima()
-            resultado["clima"] = clima
-            resultado["stats_clima"] = self.aplicar_efecto_clima(tablero)
-            
-            # Procesamos la reproducción (siempre se intenta, pero probabilidad cambia con el clima)
-            resultado["stats_reproduccion"] = self.procesar_reproduccion_flores(tablero)
-        
-        return resultado
-    
-    def get_clima_actual(self):
-        """Retorna el clima actual."""
-        return self.clima_actual
-    
+
     def reset_clima(self):
-        """Resetea el clima a Normal."""
         self.clima_actual = "Normal"
-
-
-if __name__ == "__main__":
-    chance = ChanceEvents()
-    print(f"Probabilidad reproducción base: {chance.prob_base_reproduccion * 100}%")
-    
-    # Simulamos un evento climático
-    clima = chance.generar_evento_clima()
-    print(f"Clima generado: {clima}")
-    print(f"Probabilidad reproducción con {clima}: {chance.calcular_probabilidad_reproduccion() * 100}%")

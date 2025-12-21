@@ -1,146 +1,121 @@
-from . import board
 import random
 
-class Humanidad():
+class Humanidad:
     """
-    Agente MIN que representa a la humanidad.
-    Puede aplicar pesticidas y colocar obstáculos con restricciones de poda estratégica.
+    Agente MIN.
+    Gestiona la aplicación de pesticidas y la colocación estratégica de obstáculos.
     """
-    
-    def __init__(self, name="Human", player_name="Humanidad"):
-        self.name = name
-        self.player_name = player_name
-        self.radio_pesticida = 2  # Radio de acción para pesticidas (cerca de la abeja)
-        self.radio_obstaculo = 3  # Radio de acción para obstáculos (cerca de la colmena, EXCLUYENDO la colmena)
-        self.max_obstaculos = 4   # Máximo número de obstáculos permitidos en el tablero
+
+    def __init__(self):
+        # Configuración de radios y límites
+        self.radio_pesticida = 2
+        self.radio_obstaculo = 3
+        self.max_obstaculos = 4
 
     def distancia_chebyshev(self, pos1, pos2):
-        """Calcula la distancia Chebyshev entre dos posiciones."""
+        """Calcula la distancia máxima en un eje (movimiento de Rey)."""
         return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
-    
+
     def obtener_acciones_validas(self, tablero, pos_abeja):
-        """
-        Retorna todas las acciones válidas según las restricciones de poda estratégica.
-        
-        Args:
-            tablero: El tablero del juego
-            pos_abeja: Posición actual de la abeja
-            
-        Returns:
-            Lista de tuplas (tipo_accion, posicion) donde tipo_accion es 'pesticida' u 'obstaculo'
-        """
+        """Genera todas las jugadas legales para la Humanidad en el turno actual."""
         acciones = []
-        
-        # Obtenemos las acciones del pesticida (radio 2 de la abeja, solo en flores)
+
+        # Pesticidas: Solo en flores vivas cerca de la abeja
         for pos, flor in tablero.flores:
             if flor.esta_viva():
-                distancia = self.distancia_chebyshev(pos, pos_abeja)
-                if distancia <= self.radio_pesticida:
+                dist = self.distancia_chebyshev(pos, pos_abeja)
+                if dist <= self.radio_pesticida:
                     acciones.append(('pesticida', pos))
-        
-        # Obtenemos las acciones de los obstáculos (radio 3 de la colmena y de la abeja)
+
+        # Obstáculos: Cerca de la Colmena O cerca de la Abeja
+        candidatos = set()
+
+        # Buscamos candidatos alrededor de la colmena
+        celdas_colmena = self._obtener_celdas_candidatas(
+            tablero, tablero.pos_colmena, self.radio_obstaculo
+        )
+        candidatos.update(celdas_colmena)
+
+        # Buscamos candidatos alrededor de la abeja (para bloquearla)
+        celdas_abeja = self._obtener_celdas_candidatas(
+            tablero, pos_abeja, self.radio_obstaculo
+        )
+        candidatos.update(celdas_abeja)
+
+        # Filtramos los candidatos que son válidos (vacíos y no son entidades clave)
         pos_colmena = tablero.pos_colmena
-        candidatos_obstaculos = set()
-        
-        # Zona Colmena
-        for i in range(max(0, pos_colmena[0] - self.radio_obstaculo), min(tablero.filas, pos_colmena[0] + self.radio_obstaculo + 1)):
-            for j in range(max(0, pos_colmena[1] - self.radio_obstaculo), min(tablero.columnas, pos_colmena[1] + self.radio_obstaculo + 1)):
-                candidatos_obstaculos.add((i, j))
-                
-        # Zona Abeja (para que la IA también considere bloquear a la abeja directamente)
-        for i in range(max(0, pos_abeja[0] - self.radio_obstaculo), min(tablero.filas, pos_abeja[0] + self.radio_obstaculo + 1)):
-            for j in range(max(0, pos_abeja[1] - self.radio_obstaculo), min(tablero.columnas, pos_abeja[1] + self.radio_obstaculo + 1)):
-                candidatos_obstaculos.add((i, j))
 
-        for (i, j) in candidatos_obstaculos:
-            # Casilla vacía y verificamos que no sea la posición de la abeja ni la colmena
-            if tablero.get_celda(i, j) is None and (i, j) != pos_abeja and (i, j) != pos_colmena:
-                # Verificamos la distancia Chebyshev a colmena O abeja
-                dist_colmena = self.distancia_chebyshev((i, j), pos_colmena)
-                dist_abeja = self.distancia_chebyshev((i, j), pos_abeja)
-                
-                if (0 < dist_colmena <= self.radio_obstaculo) or (0 < dist_abeja <= self.radio_obstaculo):
-                    acciones.append(('obstaculo', (i, j)))
+        for pos in candidatos:
+            # No podemos poner obstáculo sobre la abeja, la colmena o algo que no sea vacío (None)
+            if pos == pos_abeja or pos == pos_colmena:
+                continue
 
-        random.shuffle(acciones)  # Para que la IA no tenga preferencias por la primera acción si las demás son igual de buenas
+            if tablero.get_celda(pos[0], pos[1]) is not None:
+                continue
+
+            # Regla: Debe estar dentro del radio de influencia de alguno de los objetivos
+            # (El helper ya filtra por radio cuadrado, pero verificamos distancia exacta si es necesario)
+            acciones.append(('obstaculo', pos))
+
+        # Mezclamos para evitar sesgo posicional en la IA
+        random.shuffle(acciones)
         return acciones
-    
-    def aplicar_pesticida(self, tablero, posicion, pos_abeja):
-        """
-        Aplica pesticida en una posición si cumple las restricciones.
-        
-        Args:
-            tablero: El tablero del juego
-            posicion: Posición donde aplicar el pesticida
-            pos_abeja: Posición actual de la abeja
-            
-        Returns:
-            True si se aplicó exitosamente, False en caso contrario
-        """
-        fila, col = posicion
-        
-        # Verificamos que hay una flor
-        if not tablero.es_flor(fila, col):
-            return False
-        
-        # Verificamos restricción de radio
-        distancia = self.distancia_chebyshev(posicion, pos_abeja)
-        if distancia > self.radio_pesticida:
-            return False
-        
-        # Aplicamos pesticida
-        exito = tablero.aplicar_pesticida_en(fila, col)
-        return exito
-    
-    def colocar_obstaculo(self, tablero, posicion):
-        """Coloca un obstáculo en una posición si cumple las restricciones.
-        Si ya hay 4 obstáculos, elimina el más antiguo.
-        
-        Args:
-            tablero: El tablero del juego
-            posicion: Posición donde colocar el obstáculo
-            
-        Returns:
-            True si se colocó exitosamente, False en caso contrario
-        """
-        fila, col = posicion
-        
-        # Verificamos que NO es la casilla de la colmena
-        if (fila, col) == tablero.pos_colmena:
-            return False
-        
-        # Verificamos la restricción de radio respecto a la colmena (1 a 3, excluyendo 0)
-        distancia = self.distancia_chebyshev(posicion, tablero.pos_colmena)
-        if distancia == 0 or distancia > self.radio_obstaculo:
-            return False
-        
-        # Si ya hay 4 obstáculos, eliminamos el más antiguo (FIFO)
-        if len(tablero.obstaculos) >= self.max_obstaculos:
-            obstaculo_antiguo = tablero.obstaculos[0]
-            tablero.grid[obstaculo_antiguo[0]][obstaculo_antiguo[1]] = None
-            tablero.obstaculos.pop(0)
-        
-        # Colocamos el obstáculo
-        exito = tablero.colocar_obstaculo(fila, col)
-        return exito
-    
+
     def ejecutar_accion(self, tablero, accion, pos_abeja):
+        """Despacha la acción al método correspondiente."""
+        tipo, pos = accion
+
+        if tipo == 'pesticida':
+            return self._aplicar_pesticida(tablero, pos, pos_abeja)
+        elif tipo == 'obstaculo':
+            return self.colocar_obstaculo(tablero, pos)
+
+        return False
+
+    def colocar_obstaculo(self, tablero, posicion):
         """
-        Ejecuta una acción (pesticida u obstáculo).
-        
-        Args:
-            tablero: El tablero del juego
-            accion: Tupla (tipo_accion, posicion)
-            pos_abeja: Posición actual de la abeja
-            
-        Returns:
-            True si se ejecutó exitosamente, False en caso contrario
+        Intenta colocar un obstáculo gestionando el límite máximo (FIFO).
+        Es público porque la GUI lo usa para aplicar decisiones de la IA.
         """
-        tipo_accion, posicion = accion
-        
-        if tipo_accion == 'pesticida':
-            return self.aplicar_pesticida(tablero, posicion, pos_abeja)
-        elif tipo_accion == 'obstaculo':
-            return self.colocar_obstaculo(tablero, posicion)
-        else:
+        # Validación básica de seguridad
+        if posicion == tablero.pos_colmena:
             return False
+
+        # Gestión de inventario de obstáculos (FIFO)
+        if len(tablero.obstaculos) >= self.max_obstaculos:
+            # Eliminamos el más antiguo
+            viejo_pos = tablero.obstaculos[0]
+            # Accedemos al grid para limpiar
+            # Si board tuviera un método 'quitar_obstaculo', sería mejor usarlo.
+            tablero.grid[viejo_pos[0]][viejo_pos[1]] = None
+            tablero.obstaculos.pop(0)
+
+        # Delegamos la colocación al tablero
+        return tablero.colocar_obstaculo(posicion[0], posicion[1])
+
+    def _aplicar_pesticida(self, tablero, posicion, pos_abeja):
+        """Aplica pesticida validando la distancia."""
+        # Doble check de distancia por seguridad
+        if self.distancia_chebyshev(posicion, pos_abeja) > self.radio_pesticida:
+            return False
+
+        return tablero.aplicar_pesticida_en(posicion[0], posicion[1])
+
+    def _obtener_celdas_candidatas(self, tablero, centro, radio):
+        """Retorna una lista de coordenadas dentro del cuadrado definido por el radio."""
+        candidatas = []
+        cx, cy = centro
+
+        # Calculamos rangos seguros dentro de los límites del tablero
+        min_f = max(0, cx - radio)
+        max_f = min(tablero.filas, cx + radio + 1)
+        min_c = max(0, cy - radio)
+        max_c = min(tablero.columnas, cy + radio + 1)
+
+        for f in range(min_f, max_f):
+            for c in range(min_c, max_c):
+                # Excluimos el centro exacto (la propia entidad)
+                if (f, c) != centro:
+                    candidatas.append((f, c))
+
+        return candidatas
