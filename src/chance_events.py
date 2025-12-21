@@ -59,7 +59,7 @@ class ChanceEvents():
         }
         
         if self.clima_actual == "Lluvia":
-            # Reducir 1 unidad de pesticida a todas las flores
+            # Reducimos 1 unidad de pesticida a todas las flores
             for pos, flor in tablero.flores:
                 if flor.esta_viva() and flor.pesticidas > 0:
                     flor.reducir_pesticida(1)
@@ -70,7 +70,7 @@ class ChanceEvents():
             # El efecto del sol se aplica en la reproducción
             stats["mensaje"] = "Bonificación de +20% a reproducción de flores polinizadas"
         
-        # Normal no tiene efectos
+        # El clima Normal no tiene efectos
         
         return stats
     
@@ -100,25 +100,25 @@ class ChanceEvents():
         fila, col = pos_flor
         flor = tablero.get_celda(fila, col)
         
-        # Verificar que la flor está viva y polinizada
+        # Verificamos que la flor está viva y polinizada
         if not isinstance(flor, Flower) or not flor.esta_viva() or not flor.esta_polinizada():
             return False, None
         
-        # Calcular probabilidad
+        # Calculamos la probabilidad de reproduccion
         prob_reproduccion = self.calcular_probabilidad_reproduccion()
         
-        # Tirar dado
+        # Vemos si se reproduce o no la flor
         if random.random() > prob_reproduccion:
             return False, None
         
-        # Buscar casilla adyacente vacía para la nueva flor
+        # Buscamos una casilla adyacente vacía para la nueva flor
         casillas_adyacentes = [
             (fila - 1, col - 1), (fila - 1, col), (fila - 1, col + 1),
             (fila, col - 1),                       (fila, col + 1),
             (fila + 1, col - 1), (fila + 1, col), (fila + 1, col + 1)
         ]
         
-        # Filtrar casillas válidas y vacías
+        # Filtramos casillas válidas y vacías
         casillas_validas = []
         for f, c in casillas_adyacentes:
             if 0 <= f < tablero.filas and 0 <= c < tablero.columnas:
@@ -128,10 +128,10 @@ class ChanceEvents():
         if not casillas_validas:
             return False, None  # No hay espacio para nueva flor
         
-        # Elegir una casilla aleatoria
+        # Elegimos una casilla aleatoria de las validas
         nueva_pos = random.choice(casillas_validas)
         
-        # Crear nueva flor
+        # Creamos la nueva flor
         nueva_flor = Flower()
         tablero.grid[nueva_pos[0]][nueva_pos[1]] = nueva_flor
         tablero.flores.append((nueva_pos, nueva_flor))
@@ -155,13 +155,13 @@ class ChanceEvents():
             "probabilidad": self.calcular_probabilidad_reproduccion()
         }
         
-        # Obtener flores polinizadas (hacemos copia para evitar modificar durante iteración)
+        # Obtenemos flores polinizadas (hacemos copia para evitar modificar durante la iteración)
         flores_polinizadas = [(pos, flor) for pos, flor in tablero.flores 
                               if flor.esta_viva() and flor.esta_polinizada()]
         
         stats["flores_polinizadas"] = len(flores_polinizadas)
         
-        # Intentar reproducción de cada flor polinizada
+        # Intentamos la reproducción de cada flor polinizada
         for pos, flor in flores_polinizadas:
             exito, nueva_pos = self.intentar_reproduccion(tablero, pos)
             if exito:
@@ -188,16 +188,16 @@ class ChanceEvents():
             "stats_reproduccion": None
         }
         
-        # Verificar si toca evento climático
+        # Verificamos si toca evento climático
         if self.debe_activar_clima(turno_actual):
             resultado["evento_clima"] = True
             
-            # Generar y aplicar clima
+            # Generamos y aplicamos el clima
             clima = self.generar_evento_clima()
             resultado["clima"] = clima
             resultado["stats_clima"] = self.aplicar_efecto_clima(tablero)
             
-            # Procesar reproducción (siempre se intenta, pero probabilidad cambia con clima)
+            # Procesamos la reproducción (siempre se intenta, pero probabilidad cambia con el clima)
             resultado["stats_reproduccion"] = self.procesar_reproduccion_flores(tablero)
         
         return resultado
@@ -212,11 +212,10 @@ class ChanceEvents():
 
 
 if __name__ == "__main__":
-    # Prueba básica
     chance = ChanceEvents()
     print(f"Probabilidad reproducción base: {chance.prob_base_reproduccion * 100}%")
     
-    # Simular evento climático
+    # Simulamos un evento climático
     clima = chance.generar_evento_clima()
     print(f"Clima generado: {clima}")
     print(f"Probabilidad reproducción con {clima}: {chance.calcular_probabilidad_reproduccion() * 100}%")

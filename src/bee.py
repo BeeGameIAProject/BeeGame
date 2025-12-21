@@ -1,33 +1,28 @@
 import heapq
-
+from .flower import Flower
 import random # necesario para A* con aleatoriedad
 
 class Bee():
     
-    def  __init__(self, life, energia=100, capacidad_nectar=50, first_move=True, player_name="Bee", factor_a_star=0.5):
-        self.life = life
-        self.max_vida = life
+    def  __init__(self, vida, energia=100, capacidad_nectar=50, first_move=True, factor_a_star=0.5):
+        self.vida = vida
+        self.max_vida = vida
         self.energia = energia
         self.max_energia = energia
         self.nectar_cargado = 0
         self.capacidad_nectar = capacidad_nectar
-        self.first_move = first_move
-        self.player_name = player_name
         self.daño_ataque = 10
         self.coste_movimiento = 5  # Energía que cuesta moverse
         self.coste_recoleccion = 3  # Energía que cuesta recoger néctar
         self.nectar_por_flor = 10  # Cantidad de néctar que se obtiene por flor
         self.factor_a_star = factor_a_star  # Controla cuánta aleatoriedad se inyecta en A*
-    
-    # def to_string(self):
-    #     return f"Life: {self.life}/{self.max_vida}, Energía: {self.energia}/{self.max_energia}, Néctar: {self.nectar_cargado}/{self.capacidad_nectar}, Icono: {self.name}"
-    
+
     def is_valid_move(self,board,start,to):
         """Comprueba si el movimiento es válido (estilo rey de ajedrez)."""
         filas = board.fila()
         columnas = board.columna()
 
-        # Comprobar límites
+        # Comprobamos los límites
         if not (0 <= to[0] < filas and 0 <= to[1] < columnas):
             return False
 
@@ -38,7 +33,6 @@ class Bee():
     
     def aplicar_daño_por_flor(self, board, posicion):
         """Aplica daño a la abeja si pasa por una flor con pesticidas."""
-        from .flower import Flower
         celda = board.get_celda(posicion[0], posicion[1])
         if isinstance(celda, Flower) and celda.esta_viva():
             daño = celda.get_daño_pesticida()
@@ -49,21 +43,21 @@ class Bee():
 
     def abeja_tocada(self):
         """Baja la vida con daño predeterminado"""
-        self.life -= self.daño_ataque
-        if self.life <0:
-            self.life = 0
+        self.vida -= self.daño_ataque
+        if self.vida <0:
+            self.vida = 0
         
     def bajar_vida(self, ataque):
         """Baja la vida con daño específico"""
-        self.life -= ataque
-        if self.life <0:
-            self.life = 0
+        self.vida -= ataque
+        if self.vida <0:
+            self.vida = 0
         
     def subir_vida(self, cura):
         """Sube la vida"""
-        self.life += cura
-        if self.life > self.max_vida:
-            self.life = self.max_vida 
+        self.vida += cura
+        if self.vida > self.max_vida:
+            self.vida = self.max_vida
     
     def next_moves(self, board, position):
         """Retorna los siguientes movimientos posibles"""
@@ -83,7 +77,7 @@ class Bee():
 
     def esta_viva(self):
         """Devuelve True si la abeja sigue viva."""
-        return self.life > 0
+        return self.vida > 0
     
     def tiene_energia(self, cantidad):
         """Verifica si la abeja tiene suficiente energía."""
@@ -104,8 +98,8 @@ class Bee():
         if not tablero.es_transitable(pos_destino[0], pos_destino[1]):
             return False
         
-        # Aplicar daño si pasa por una flor con pesticidas
-        daño = self.aplicar_daño_por_flor(tablero, pos_destino)
+        # Aplicamos daño si pasa por una flor con pesticidas
+        self.aplicar_daño_por_flor(tablero, pos_destino)
         if pos_actual[0] != pos_destino[0] or pos_actual[1] != pos_destino[1]:
             self.energia -= self.coste_movimiento
         return True
@@ -126,14 +120,13 @@ class Bee():
         if not flor.esta_viva():
             return False
         
-        # Polinizar la flor
+        # Poliniza la flor
         flor.polinizar()
         
-        # Recoger néctar
+        # Recoge néctar
         cantidad_recolectada = min(self.nectar_por_flor, self.capacidad_nectar - self.nectar_cargado)
         self.nectar_cargado += cantidad_recolectada
         self.energia -= self.coste_recoleccion
-        
         
         return True
     
@@ -163,10 +156,8 @@ class Bee():
         if not tablero.es_colmena(fila, col):
             return False
         
-        energia_recuperada = self.max_energia - self.energia
-        vida_recuperada = self.max_vida - self.life
         self.energia = self.max_energia
-        self.life = self.max_vida
+        self.vida = self.max_vida
         return True
     
     def calcular_ruta_a_colmena(self, tablero, pos_actual, factor_aleatorio=None, destino=None):
@@ -177,7 +168,7 @@ class Bee():
             destino = tablero.pos_colmena
         return self.a_star_random(tablero, pos_actual, destino, factor_aleatorio=factor)
     
-    # A* CON aleatoriedad
+    # A* con aleatoriedad
     def a_star_random(self, tablero, inicio, objetivo, factor_aleatorio=0.5):
         """Implementa el algoritmo A* para encontrar la ruta óptima.
         Retorna una lista de posiciones desde inicio hasta objetivo.
@@ -207,7 +198,7 @@ class Bee():
             # Explorar vecinos
             vecinos = self.next_moves(tablero, actual)
 
-            # Mezclar los vecinos para el orden de evaluación
+            # Mezclar los vecinos para que el orden de evaluación
             # para que no sea siempre arriba, abajo, izquerda, derecha
             for vecino in vecinos:
                 if vecino in closed_set:
@@ -229,8 +220,3 @@ class Bee():
                 heapq.heappush(open_set, (f_nuevo, g_nuevo, vecino, nuevo_camino))
         
         return []  # No se encontró ruta
-
-    # def printname(self):
-    #     print(self.name)
-
-

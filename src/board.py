@@ -31,29 +31,28 @@ class Board():
             num_obstaculos: Número de obstáculos a colocar
             pos_colmena: Posición de la colmena (si es None, se coloca en el centro)
         """
-        # Limpiar tablero
+        # Limpiamos el tablero
         self.grid = [[None for _ in range(self.columnas)] for _ in range(self.filas)]
         self.flores = []
         self.obstaculos = []
         
-        # Colocar colmena
+        # Colocamos la colmena
         if pos_colmena is None:
             self.pos_colmena = (self.filas // 2, self.columnas // 2)
         else:
             self.pos_colmena = pos_colmena
         self.grid[self.pos_colmena[0]][self.pos_colmena[1]] = "COLMENA"
-        
-        # Colocar flores
 
-        # Reservar posición inicial de la abeja (encima de la colmena)
+        # Reservamos la posición inicial de la abeja (encima de la colmena)
         pos_abeja_inicio = (self.pos_colmena[0] - 1, self.pos_colmena[1])
 
+        # Colocamos flores
         flores_colocadas = 0
         while flores_colocadas < num_flores:
             fila = random.randint(0, self.filas - 1)
             col = random.randint(0, self.columnas - 1)
 
-            # Evitar colocar en la posición reservada para la abeja
+            # Evitamos colocar en la posición reservada para la abeja
             if (fila, col) == pos_abeja_inicio:
                 continue
 
@@ -63,13 +62,13 @@ class Board():
                 self.flores.append(((fila, col), flor))
                 flores_colocadas += 1
         
-        # Colocar obstáculos
+        # Colocamos obstáculos
         obstaculos_colocados = 0
         while obstaculos_colocados < num_obstaculos:
             fila = random.randint(0, self.filas - 1)
             col = random.randint(0, self.columnas - 1)
             
-            # Evitar colocar en la posición reservada para la abeja
+            # Evitamos colocar en la posición reservada para la abeja
             if (fila, col) == pos_abeja_inicio:
                 continue
 
@@ -112,7 +111,7 @@ class Board():
         if celda is None:
             return True
 
-        # Solo bloqueamos si es explícitamente un "OBSTACULO"
+        # Solo bloqueamos si es explícitamente un obstaculo
         return celda != "OBSTACULO"
     
     def colocar_obstaculo(self, fila, col):
@@ -146,7 +145,7 @@ class Board():
     def incrementar_turno(self):
         """Incrementa el contador de turnos."""
         self.turno += 1
-        # Incrementar contador de flores muertas y eliminarlas si es necesario
+        # Incrementamos el contador de flores muertas y las eliminamos si es necesario
         self.limpiar_flores_muertas()
     
     def get_turno(self):
@@ -164,13 +163,7 @@ class Board():
                     # Limpiar del grid
                     self.grid[pos[0]][pos[1]] = None
         
-        # Eliminar de la lista de flores
+        # Las eliminamos de la lista de flores
         for item in flores_a_eliminar:
             if item in self.flores:
                 self.flores.remove(item)
-    
-    # def mostrar_tablero(self):
-    #     """Imprime una representación visual del tablero."""
-    #     print("\n" + "="*50)
-    #     print(f"Turno: {self.turno} | Néctar en la colmena: {self.nectar_en_colmena}")
-    #     print("="*50 + "\n")

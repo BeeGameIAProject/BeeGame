@@ -13,10 +13,7 @@ class Humanidad():
         self.radio_pesticida = 2  # Radio de acción para pesticidas (cerca de la abeja)
         self.radio_obstaculo = 3  # Radio de acción para obstáculos (cerca de la colmena, EXCLUYENDO la colmena)
         self.max_obstaculos = 4   # Máximo número de obstáculos permitidos en el tablero
-    
-    # def to_string(self):
-    #     return f"Agente: {self.player_name}, Icono: {self.name}"
-    
+
     def distancia_chebyshev(self, pos1, pos2):
         """Calcula la distancia Chebyshev entre dos posiciones."""
         return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
@@ -34,14 +31,14 @@ class Humanidad():
         """
         acciones = []
         
-        # Obtener acciones de pesticida (radio 2 de la abeja, solo en flores)
+        # Obtenemos las acciones del pesticida (radio 2 de la abeja, solo en flores)
         for pos, flor in tablero.flores:
             if flor.esta_viva():
                 distancia = self.distancia_chebyshev(pos, pos_abeja)
                 if distancia <= self.radio_pesticida:
                     acciones.append(('pesticida', pos))
         
-        # Obtener acciones de obstáculo (radio 3 de la colmena, en casillas vacías, EXCLUYENDO la casilla de la colmena)
+        # Obtenemos las acciones de los obstáculos (radio 3 de la colmena, en casillas vacías, EXCLUYENDO la casilla de la colmena)
         pos_colmena = tablero.pos_colmena
         for i in range(tablero.filas):
             for j in range(tablero.columnas):
@@ -68,16 +65,16 @@ class Humanidad():
         """
         fila, col = posicion
         
-        # Verificar que hay una flor
+        # Verificamos que hay una flor
         if not tablero.es_flor(fila, col):
             return False
         
-        # Verificar restricción de radio
+        # Verificamos restricción de radio
         distancia = self.distancia_chebyshev(posicion, pos_abeja)
         if distancia > self.radio_pesticida:
             return False
         
-        # Aplicar pesticida
+        # Aplicamos pesticida
         exito = tablero.aplicar_pesticida_en(fila, col)
         return exito
     
@@ -94,22 +91,22 @@ class Humanidad():
         """
         fila, col = posicion
         
-        # Verificar que NO es la casilla de la colmena
+        # Verificamos que NO es la casilla de la colmena
         if (fila, col) == tablero.pos_colmena:
             return False
         
-        # Verificar restricción de radio respecto a la colmena (1 a 3, excluyendo 0)
+        # Verificamos la restricción de radio respecto a la colmena (1 a 3, excluyendo 0)
         distancia = self.distancia_chebyshev(posicion, tablero.pos_colmena)
         if distancia == 0 or distancia > self.radio_obstaculo:
             return False
         
-        # Si ya hay 4 obstáculos, eliminar el más antiguo (FIFO)
+        # Si ya hay 4 obstáculos, eliminamos el más antiguo (FIFO)
         if len(tablero.obstaculos) >= self.max_obstaculos:
             obstaculo_antiguo = tablero.obstaculos[0]
             tablero.grid[obstaculo_antiguo[0]][obstaculo_antiguo[1]] = None
             tablero.obstaculos.pop(0)
         
-        # Colocar obstáculo
+        # Colocamos el obstáculo
         exito = tablero.colocar_obstaculo(fila, col)
         return exito
     
@@ -133,6 +130,3 @@ class Humanidad():
             return self.colocar_obstaculo(tablero, posicion)
         else:
             return False
-    
-    # def printname(self):
-    #     print(self.name)

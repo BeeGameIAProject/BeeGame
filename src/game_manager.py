@@ -17,7 +17,7 @@ class GameManager():
         """
         self.nectar_objetivo = nectar_objetivo
         self.juego_terminado = False
-        self.resultado = None  # 'VICTORIA', 'DERROTA_ABEJA_MUERTA', 'DERROTA_SIN_FLORES'
+        self.resultado = None  # 'VICTORIA', 'DERROTA_ABEJA_MUERTA', etc
         self.mensaje_final = ""
     
     def verificar_condiciones_finalizacion(self, tablero, abeja):
@@ -37,28 +37,28 @@ class GameManager():
             self.mensaje_final = f" ¡VICTORIA! Has llegado al objetivo de néctar"
             return True, self.resultado, self.mensaje_final
         
-        # Verificar derrota por muerte de abeja
+        # Verificamos derrota por muerte de abeja
         if self.verificar_derrota_abeja_muerta(abeja):
             self.juego_terminado = True
             self.resultado = 'DERROTA_ABEJA_MUERTA'
             self.mensaje_final = "¡DERROTA! La abeja ha muerto"
             return True, self.resultado, self.mensaje_final
         
-        # Verificar derrota por extinción de flores
+        # Verificamos derrota por extinción de flores
         if self.verificar_derrota_sin_flores(tablero):
             self.juego_terminado = True
             self.resultado = 'DERROTA_SIN_FLORES'
             self.mensaje_final = "¡DERROTA! No quedan flores vivas en el tablero"
             return True, self.resultado, self.mensaje_final
 
-        # Verificar derrota por falta de energía
+        # Verificamos derrota por falta de energía
         if abeja.energia <= 0:
             self.juego_terminado = True
             self.resultado = 'DERROTA_SIN_ENERGIA'
             self.mensaje_final = "¡DERROTA! La abeja se ha quedado sin energía"
             return True, self.resultado, self.mensaje_final
         
-        # Juego continúa
+        # El juego continua
         return False, None, ""
     
     def verificar_victoria(self, tablero):
@@ -87,7 +87,7 @@ class GameManager():
         Returns:
             True si la abeja está muerta
         """
-        return not abeja.esta_viva() or abeja.life <= 0
+        return not abeja.esta_viva() or abeja.vida <= 0
     
     def verificar_derrota_sin_flores(self, tablero):
         """
@@ -135,57 +135,18 @@ class GameManager():
             'nectar_actual': tablero.nectar_en_colmena,
             'nectar_objetivo': self.nectar_objetivo,
             'progreso_victoria': progreso,
-            'vida_abeja': abeja.life,
+            'vida_abeja': abeja.vida,
             'energia_abeja': abeja.energia,
             'flores_vivas': tablero.contar_flores_vivas(),
             'flores_totales': len(tablero.flores),
             'turnos': tablero.get_turno()
         }
-    
-    # def mostrar_estado(self, tablero, abeja):
-    #     """
-    #     Muestra el estado actual del juego en formato legible.
-    #
-    #     Args:
-    #         tablero: El tablero del juego
-    #         abeja: La abeja jugadora
-    #     """
-    #     estado = self.get_estado_juego(tablero, abeja)
-    #
-    #     print("\n" + "="*60)
-    #     print("ESTADO DEL JUEGO")
-    #     print("="*60)
-    #     print(f"Turno: {estado['turnos']}")
-    #     print(f"\n Progreso de Néctar:")
-    #     print(f"   Actual: {estado['nectar_actual']}/{estado['nectar_objetivo']}")
-    #     print(f"   Progreso: {estado['progreso_victoria']:.1f}%")
-    #
-    #     # Barra de progreso visual
-    #     barra_longitud = 30
-    #     barra_llena = int((estado['progreso_victoria'] / 100) * barra_longitud)
-    #     barra_vacia = barra_longitud - barra_llena
-    #     barra = "█" * barra_llena + "░" * barra_vacia
-    #     print(f"   [{barra}]")
-    #
-    #     print(f"\nEstado de la Abeja:")
-    #     print(f"   Vida: {estado['vida_abeja']}/100")
-    #     print(f"   Energía: {estado['energia_abeja']}/100")
-    #
-    #     print(f"\nFlores:")
-    #     print(f"   Vivas: {estado['flores_vivas']}/{estado['flores_totales']}")
-    #
-    #     if estado['terminado']:
-    #         print(f"\n{'='*60}")
-    #         print(f"JUEGO TERMINADO: {estado['resultado']}")
-    #         print(f"{estado['mensaje']}")
-    #         print(f"{'='*60}")
-    
+
     def reset(self):
         """Reinicia el estado del gestor del juego."""
         self.juego_terminado = False
         self.resultado = None
         self.mensaje_final = ""
-
 
 if __name__ == "__main__":
     print("Game Manager implementado")

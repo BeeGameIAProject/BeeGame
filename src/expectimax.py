@@ -15,10 +15,10 @@ class GameState():
     
     def copy(self):
         """Crea una copia profunda del estado del juego."""
-        # Copiar tablero
+        # Copiamos el tablero
         nuevo_tablero = copy.deepcopy(self.tablero)
         
-        # Copiar agentes
+        # Copiamos a los agentes
         nueva_abeja = copy.deepcopy(self.abeja)
         nueva_humanidad = copy.deepcopy(self.humanidad)
         nuevos_eventos = copy.deepcopy(self.eventos_azar)
@@ -41,10 +41,10 @@ class ExpectimaxAI():
     
     def __init__(self, max_depth=3, heuristica=None):
         self.max_depth = max_depth
-        self.nodes_explored = 0
+        self.nodos_explorados = 0
         self.heuristica = heuristica if heuristica else Heuristica()
     
-    def get_best_action(self, estado):
+    def get_mejor_accion(self, estado):
         """
         Retorna la mejor acción para la abeja usando Expectimax.
         
@@ -54,7 +54,7 @@ class ExpectimaxAI():
         Returns:
             Mejor acción a ejecutar
         """
-        self.nodes_explored = 0
+        self.nodos_explorados = 0
         acciones_posibles = self.get_acciones_abeja(estado)
         
         if not acciones_posibles:
@@ -64,10 +64,10 @@ class ExpectimaxAI():
         mejor_accion = None
         
         for accion in acciones_posibles:
-            # Simular la acción
+            # Simulamos la acción
             nuevo_estado = self.aplicar_accion_abeja(estado, accion)
             
-            # Evaluar usando Expectimax (siguiente nivel es MIN)
+            # Evaluamos usando Expectimax (el siguiente nivel es MIN)
             valor = self.expectimax(nuevo_estado, 1, 'MIN')
             
             if valor > mejor_valor:
@@ -88,7 +88,7 @@ class ExpectimaxAI():
         Returns:
             Valor esperado del estado
         """
-        self.nodes_explored += 1
+        self.nodos_explorados += 1
         
         # Condiciones de terminación
         if profundidad >= self.max_depth or self.es_estado_terminal(estado):
@@ -254,8 +254,8 @@ class ExpectimaxAI():
     def aplicar_evento_clima(self, estado):
         """Aplica los efectos del clima actual al estado."""
         estado.eventos_azar.aplicar_efecto_clima(estado.tablero)
-        # Simplificación: no simular reproducción completa en el árbol
-        # (demasiado costoso computacionalmente)
+        # Simplificación: no simula la reproducción completa en el árbol
+        # ya que es demasiado costoso computacionalmente
     
     def es_estado_terminal(self, estado):
         """Verifica si el estado es terminal (victoria o derrota)."""

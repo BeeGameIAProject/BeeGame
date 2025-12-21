@@ -47,7 +47,7 @@ class Heuristica():
         Returns:
             Valor heurístico del estado
         """
-        # Verificar estados terminales
+        # Verificamos si es un estado terminal
         if not estado.abeja.esta_viva():
             return -100000
         
@@ -59,13 +59,13 @@ class Heuristica():
         if estado.tablero.nectar_en_colmena >= nectar_objetivo:
             return 100000
         
-        # Calcular componentes de la heurística
+        # Calculamos los componentes de la heurística
         h_tauler = self.h_tauler(estado)
         h_agent = self.h_agent(estado)
         h_progres = self.h_progres(estado)
         h_proximitat = self.h_proximitat(estado)
         
-        # Combinar componentes con pesos
+        # Combinamos los componentes con pesos
         valor_total = h_tauler + h_agent + h_progres + h_proximitat
         
         return valor_total
@@ -82,7 +82,7 @@ class Heuristica():
         """
         valor = 0
         
-        # Contar flores en diferentes estados
+        # Contamos las flores en diferentes estados
         flores_vivas = 0
         flores_polinizadas = 0
         flores_contaminadas = 0
@@ -99,16 +99,16 @@ class Heuristica():
                     flores_contaminadas += 1
                     total_pesticidas += flor.pesticidas
         
-        # Valorar flores vivas (más flores = mejor)
+        # Valoramos las flores vivas (más flores = mejor)
         valor += self.w1 * flores_vivas
         
-        # Valorar flores polinizadas (importante para reproducción)
+        # Valoramos las flores polinizadas (importante para reproducción)
         valor += self.w2 * flores_polinizadas
         
-        # Penalizar flores contaminadas
+        # Penalizamos las flores contaminadas
         valor -= 5 * flores_contaminadas
         
-        # Penalizar pesticidas totales
+        # Penalizamos los pesticidas totales
         valor -= 3 * total_pesticidas
         
         return valor
@@ -124,19 +124,19 @@ class Heuristica():
         """
         valor = 0
         
-        # Normalizar vida (0-1)
-        ratio_vida = estado.abeja.life / estado.abeja.max_vida
+        # Normalizamos la vida (0-1)
+        ratio_vida = estado.abeja.vida / estado.abeja.max_vida
         valor += self.w5 * ratio_vida * 100
         
-        # Normalizar energía (0-1)
+        # Normalizamos la energía (0-1)
         ratio_energia = estado.abeja.energia / estado.abeja.max_energia
         valor += self.w6 * ratio_energia * 100
         
-        # Penalizar fuertemente si la vida es crítica (<30%)
+        # Penalizamos fuertemente si la vida es crítica (<30%)
         if ratio_vida < 0.3:
             valor -= 500
         
-        # Penalizar si la energía es muy baja (<20%)
+        # Penalizamos si la energía es muy baja (<20%)
         if ratio_energia < 0.2:
             valor -= 200
         
@@ -153,10 +153,10 @@ class Heuristica():
         """
         valor = 0
         
-        # Valorar néctar en la colmena (objetivo principal del juego)
+        # Valoramos el néctar en la colmena (objetivo principal del juego)
         valor += self.w3 * estado.tablero.nectar_en_colmena
         
-        # Valorar néctar cargado (potencial para depositar)
+        # Valoramos el néctar cargado (potencial para depositar)
         valor += self.w4 * estado.abeja.nectar_cargado
         
         # Bonus si está cerca de completar el objetivo
@@ -185,18 +185,18 @@ class Heuristica():
         
         pos_abeja = estado.pos_abeja
         
-        # Si tiene néctar cargado, priorizar estar cerca de la colmena
+        # Si tiene néctar cargado, priorizamos estar cerca de la colmena
         if estado.abeja.nectar_cargado > 0:
             distancia_colmena = self.distancia_chebyshev(pos_abeja, estado.tablero.pos_colmena)
             
-            # Mientras más lejos de la colmena, peor (invertir distancia)
+            # Mientras más lejos de la colmena, peor (invertimos la distancia)
             valor -= self.w7 * distancia_colmena * 2
             
             # Bonus si está en la colmena
             if distancia_colmena == 0:
                 valor += 100
         
-        # Si no tiene néctar o tiene espacio, valorar proximidad a flores
+        # Si no tiene néctar o tiene espacio, valoramos la proximidad a las flores
         elif estado.abeja.puede_cargar_nectar():
             # Buscar la flor viva más cercana
             flores_vivas = estado.tablero.get_flores_vivas()
@@ -224,13 +224,13 @@ class Heuristica():
     def to_string(self):
         """Retorna una representación de los pesos configurados."""
         return f"""Pesos de la Heurística:
-  w1 (Flores vivas): {self.w1}
-  w2 (Flores polinizadas): {self.w2}
-  w3 (Néctar en la colmena): {self.w3}
-  w4 (Néctar cargado): {self.w4}
-  w5 (Vida abeja): {self.w5}
-  w6 (Energía abeja): {self.w6}
-  w7 (Proximidad): {self.w7}"""
+              w1 (Flores vivas): {self.w1}
+              w2 (Flores polinizadas): {self.w2}
+              w3 (Néctar en la colmena): {self.w3}
+              w4 (Néctar cargado): {self.w4}
+              w5 (Vida abeja): {self.w5}
+              w6 (Energía abeja): {self.w6}
+              w7 (Proximidad): {self.w7}"""
 
 
 if __name__ == "__main__":
