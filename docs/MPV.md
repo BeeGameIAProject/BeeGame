@@ -64,12 +64,12 @@
 
 ## 5. Heurística y Evaluación
 - [x] **Función Heurística $H(s)$**: Implementar fórmula de evaluación de estado para nodos hoja/límite.
-    - [x] Fórmula: $H(s) = H_{tauler} + H_{agent} + H_{progrés} + H_{proximitat}$.
+    - [x] Fórmula: $H(s) = H_{tauler} + H_{agent} + H_{progrés} + H_{proximidad}$.
 - [x] **Componentes Heurísticos**:
     - [x] $H_{tauler}$: Valorar flores sanas y polinizadas vs. contaminadas.
     - [x] $H_{agent}$: Valorar vida y energía de la abeja.
     - [x] $H_{progrés}$: Valorar néctar en rusc y néctar cargado.
-    - [x] $H_{proximitat}$: Valorar distancia a objetivos según estado del inventario.
+    - [x] $H_{proximidad}$: Valorar distancia a objetivos según estado del inventario.
 - [x] **Ajuste de Pesos**: Definir variables para los pesos ($w_1$ a $w_7$) para calibración.
 
 ## 6. Condiciones de Finalización

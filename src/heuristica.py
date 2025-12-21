@@ -1,84 +1,97 @@
 """
 Módulo de heurística para el algoritmo Expectimax.
-Implementa la función H(s) = H_tauler + H_agent + H_progrés + H_proximitat
+Implementa la función de evaluación H(s) para determinar la utilidad de un estado.
 """
 
 class Heuristica():
     """
     Función heurística completa para evaluar estados del juego.
     
-    Componentes:
-    - H_tablero: Valoración del estado del tablero (flores)
-    - H_agent: Valoración del estado de la abeja
-    - H_progreso: Valoración del progreso hacia la victoria
-    - H_proximidad: Valoración de la distancia a objetivos
-    
-    Fórmula: H(s) = w1*H_tauler + w2*H_agent + w3*H_progrés + w4*H_proximitat
+    Esta clase combina múltiples factores (sub-heurísticas) para generar un valor numérico
+    que representa qué tan favorable es un estado para la Abeja.
+
+    Fórmula General:
+    H(s) = H_tablero + H_agente + H_progreso + H_proximidad + H_amenaza - H_obstaculos
     """
     
-    def __init__(self, w1=10, w2=8, w3=15, w4=5, w5=3, w6=2, w7=1):
+    def __init__(self, w1=10, w2=8, w3=15, w4=5, w5=3, w6=2, w7=1, w8=5, w9=5):
         """
         Inicializa los pesos de la heurística.
-        
-        Pesos:
-        w1: Peso para flores vivas
-        w2: Peso para flores polinizadas
-        w3: Peso para néctar en la colmena
-        w4: Peso para néctar cargado
-        w5: Peso para vida de la abeja
-        w6: Peso para energía de la abeja
-        w7: Peso para proximidad a objetivos
+        Estos pesos determinan la importancia relativa de cada factor en la toma de decisiones.
+
+        Args:
+            w1 (float): Peso para flores vivas (mantenimiento del ecosistema).
+            w2 (float): Peso para flores polinizadas (objetivo secundario).
+            w3 (float): Peso para néctar en la colmena (objetivo principal).
+            w4 (float): Peso para néctar cargado en el inventario de la abeja.
+            w5 (float): Peso para la salud (vida) de la abeja.
+            w6 (float): Peso para la energía (movimiento) de la abeja.
+            w7 (float): Peso para la proximidad a los objetivos inmediatos.
+            w8 (float): Peso para la evaluación de amenazas o densidad de recursos seguros.
+            w9 (float): Peso para la penalización por obstáculos en el tablero.
         """
-        self.w1 = w1  # Flores vivas
-        self.w2 = w2  # Flores polinizadas
-        self.w3 = w3  # Néctar en la colmena (objetivo principal)
-        self.w4 = w4  # Néctar cargado
-        self.w5 = w5  # Vida de la abeja
-        self.w6 = w6  # Energía de la abeja
-        self.w7 = w7  # Proximidad
+        self.w1 = w1
+        self.w2 = w2
+        self.w3 = w3
+        self.w4 = w4
+        self.w5 = w5
+        self.w6 = w6
+        self.w7 = w7
+        self.w8 = w8
+        self.w9 = w9
     
     def evaluar(self, estado):
         """
-        Evalúa un estado del juego y retorna su valor heurístico.
-        
+        Evalúa un estado del juego y retorna su valor heurístico numérico.
+
+        El algoritmo Expectimax usará este valor para comparar nodos hoja.
+        Un valor alto favorece a MAX (Abeja), un valor bajo favorece a MIN (Humanidad).
+
         Args:
-            estado: GameState a evaluar
-            
+            estado: Objeto que contiene toda la información del juego.
+
         Returns:
-            Valor heurístico del estado
+            float: Valor heurístico del estado.
         """
-        # Verificamos si es un estado terminal
+        # === Estados terminales (condiciones de fin de juego) ===
+        # Derrota: si la abeja muere, es el peor estado posible
+        # Retornamos un negativo muy grande (equivalente a -infinito)
         if not estado.abeja.esta_viva():
             return -100000
-        
+
+        # Derrota: si no quedan flores, el ecosistema colapsa
         if estado.tablero.contar_flores_vivas() == 0:
             return -100000
-        
-        # Victoria: objetivo de néctar alcanzado
+
+        # Victoria: si se alcanza el objetivo de néctar en la colmena
+        # Retornamos un positivo muy grande (equivalente a +infinito)
         nectar_objetivo = 100
         if estado.tablero.nectar_en_colmena >= nectar_objetivo:
             return 100000
         
-        # Calculamos los componentes de la heurística
-        h_tablero = self.h_tablero(estado)
-        h_agent = self.h_agent(estado)
-        h_progreso = self.h_progreso(estado)
-        h_proximidad = self.h_proximidad(estado)
+        # === Cálculo de componentes heurísticos ==
+        h_tablero = self.h_tablero(estado)  # Estado del entorno (flores)
+        h_agent = self.h_agent(estado)  # Estado interno (salud/energía)
+        h_progreso = self.h_progreso(estado)  # Avance hacia la victoria
+        h_proximidad = self.h_proximidad(estado)  # Distancia a la meta inmediata
+        h_amenaza = self.h_amenaza(estado)  # Disponibilidad de recursos seguros
+        h_obstaculos = self.h_obstaculos(estado)  # Cantidad de bloqueos
         
-        # Combinamos los componentes con pesos
-        valor_total = h_tablero + h_agent + h_progreso + h_proximidad
+        # === Combinamos los componentes con pesos ===
+        # Nota sobre H_obstaculos:
+        #   Se RESTA porque la presencia de obstáculos es negativa para la abeja.
+        #   Como MIN intenta minimizar este valor total, MIN intentará maximizar h_obstaculos.
+        valor_total = h_tablero + h_agent + h_progreso + h_proximidad + h_amenaza - h_obstaculos
         
         return valor_total
     
     def h_tablero(self, estado):
         """
-        H_tablero: Valoración del estado del tablero.
-        
-        Considera:
-        - Número de flores vivas
-        - Número de flores polinizadas
-        - Flores contaminadas (con pesticidas)
-        - Balance general del ecosistema
+        H_tablero: Valoración de la salud general del ecosistema.
+
+        Estrategia:
+        - Premiar la cantidad de flores vivas y polinizadas.
+        - Penalizar fuertemente la presencia de pesticidas.
         """
         valor = 0
         
@@ -94,7 +107,8 @@ class Heuristica():
                 
                 if flor.esta_polinizada():
                     flores_polinizadas += 1
-                
+
+                # Detectamos contaminación antes de que la flor muera
                 if flor.pesticidas > 0:
                     flores_contaminadas += 1
                     total_pesticidas += flor.pesticidas
@@ -115,16 +129,16 @@ class Heuristica():
     
     def h_agent(self, estado):
         """
-        H_agent: Valoración del estado de la abeja.
-        
-        Considera:
-        - Vida actual vs. vida máxima
-        - Energía actual vs. energía máxima
-        - Capacidad de continuar operando
+        H_agent: Valoración de la supervivencia y capacidad operativa de la abeja.
+
+        Estrategia:
+        - Mantener vida y energía altas.
+        - Penalización no lineal (muy fuerte) si los valores caen a niveles críticos,
+          forzando a la IA a priorizar la supervivencia sobre la recolección en esos casos.
         """
         valor = 0
         
-        # Normalizamos la vida (0-1)
+        # Normalizamos la vida (0-1) para aplicar los pesos
         ratio_vida = estado.abeja.vida / estado.abeja.max_vida
         valor += self.w5 * ratio_vida * 100
         
@@ -134,29 +148,29 @@ class Heuristica():
         
         # Penalizamos fuertemente si la vida es crítica (<30%)
         if ratio_vida < 0.3:
-            valor -= 500
+            valor -= 500  # Prioridad absoluta: curarse/huir
         
         # Penalizamos si la energía es muy baja (<20%)
         if ratio_energia < 0.2:
-            valor -= 200
+            valor -= 200  # Prioridad alta: descansar/comer
         
         return valor
     
     def h_progreso(self, estado):
         """
-        H_progreso: Valoración del progreso hacia la victoria.
-        
-        Considera:
-        - Néctar acumulado en la colmena (objetivo principal)
-        - Néctar cargado por la abeja
-        - Progreso hacia el objetivo de néctar
+        H_progreso: Medición del avance hacia la condición de victoria.
+
+        Distingue entre:
+        1. Néctar asegurado (en colmena).
+        2. Néctar potencial (en inventario).
+        3. Bonus por hitos (25%, 50%, 75%) para incentivar el cierre del juego.
         """
         valor = 0
         
-        # Valoramos el néctar en la colmena (objetivo principal del juego)
+        # Néctar asegurado (w3 es el peso más alto)
         valor += self.w3 * estado.tablero.nectar_en_colmena
         
-        # Valoramos el néctar cargado (potencial para depositar)
+        # Néctar cargado (potencial para depositar)
         valor += self.w4 * estado.abeja.nectar_cargado
         
         # Bonus si está cerca de completar el objetivo
@@ -174,68 +188,105 @@ class Heuristica():
     
     def h_proximidad(self, estado):
         """
-        H_proximidad: Valoración de la distancia a objetivos.
-        
-        Considera:
-        - Distancia a flores (si necesita recoger néctar)
-        - Distancia a la colmena (si necesita descargar néctar)
-        - Prioriza según el estado del inventario
+        H_proximidad: Heurística dinámica basada en el estado interno.
+
+        Comportamiento:
+        - Modo Recolección: Si el inventario está bajo, busca la flor sana más cercana.
+        - Modo Entrega: Si el inventario está lleno (>60%), busca la colmena.
+
+        Usamos distancia inversa (1/d) para que valores más altos signifiquen "más cerca".
         """
         valor = 0
-
         pos_abeja = estado.pos_abeja
         
-        # Si tiene néctar cargado, priorizamos estar cerca de la colmena
-        if estado.abeja.nectar_cargado > 0:
+        # Si la abeja está llena (o casi), su meta es la colmena
+        # Usamos 60% de capacidad como umbral
+        capacidad = estado.abeja.capacidad_nectar
+
+        # Caso 1: La abeja tiene suficiente néctar, debe volver a casa
+        if estado.abeja.nectar_cargado >= (capacidad * 0.6):
             distancia_colmena = self.distancia_chebyshev(pos_abeja, estado.tablero.pos_colmena)
             
-            # Mientras más lejos de la colmena, peor (invertimos la distancia)
-            valor -= self.w7 * distancia_colmena * 2
-            
-            # Bonus si está en la colmena
-            if distancia_colmena == 0:
-                valor += 100
+            # Cuanto más cerca de la colmena, mejor (valor inverso)
+            if distancia_colmena > 0:
+                valor += (20.0 / distancia_colmena) * self.w7
+            else:
+                valor += 50 * self.w7 # Recompensa por estar en la colmena
         
-        # Si no tiene néctar o tiene espacio, valoramos la proximidad a las flores
-        elif estado.abeja.puede_cargar_nectar():
-            # Buscar la flor viva más cercana
+        # # Caso 2: La abeja necesita recolectar, su meta es la flor sana más cercana
+        else:
             flores_vivas = estado.tablero.get_flores_vivas()
             
             if flores_vivas:
                 distancia_min = float('inf')
                 for pos_flor, flor in flores_vivas:
-                    dist = self.distancia_chebyshev(pos_abeja, pos_flor)
-                    if dist < distancia_min:
-                        distancia_min = dist
+                    # Solo consideramos flores con néctar y sin pesticidas graves si es posible
+                    if flor.pesticidas == 0:
+                        dist = self.distancia_chebyshev(pos_abeja, pos_flor)
+                        if dist < distancia_min:
+                            distancia_min = dist
                 
-                # Mientras más cerca de una flor, mejor
-                valor -= self.w7 * distancia_min
-                
-                # Bonus si está adyacente a una flor
-                if distancia_min == 1:
-                    valor += 50
+                if distancia_min != float('inf') and distancia_min > 0:
+                    valor += (10.0 / distancia_min) * self.w7
+                elif distancia_min == 0:
+                    valor += 20 * self.w7 # Recompensa por estar en una flor
         
         return valor
+
+    def h_amenaza(self, estado):
+        """
+        H_amenaza: Evaluación de densidad de oportunidades seguras.
+
+        Calcula qué tan cerca está la abeja de flores sanas.
+        Esto actúa como una medida de "seguridad de recursos". Si el jugador MIN (Humanidad)
+        destruye una flor cercana a la abeja, este valor disminuye, por lo tanto,
+        el algoritmo detecta esa acción como negativa para MAX.
+        """
+        h_amenaza = 0
+        pos_abeja = estado.pos_abeja
+        
+        for pos_flor, flor in estado.tablero.flores:
+            if flor.esta_viva() and flor.pesticidas == 0:
+                dist = self.distancia_chebyshev(pos_abeja, pos_flor)
+                # Evitamos división por cero y limitamos la distancia mínima a 1
+                if dist < 1: dist = 1
+                h_amenaza += (10.0 / dist)
+        
+        return h_amenaza * self.w8
+
+    def h_obstaculos(self, estado):
+        """
+        H_obstaculos: Conteo de obstáculos en el tablero.
+
+        Esta función retorna un valor positivo basado en la cantidad de obstáculos.
+        En la función `evaluar`, este valor se RESTA.
+        Esto significa que para el jugador MIN (que busca minimizar el valor total),
+        crear obstáculos es una buena estrategia.
+        """
+        n_obstaculos = len(estado.tablero.obstaculos)
+        return n_obstaculos * self.w9
     
     def distancia_chebyshev(self, pos1, pos2):
         """Calcula la distancia Chebyshev entre dos posiciones."""
         return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
     
     def to_string(self):
-        """Retorna una representación de los pesos configurados."""
-        return f"""Pesos de la Heurística:
-              w1 (Flores vivas): {self.w1}
-              w2 (Flores polinizadas): {self.w2}
-              w3 (Néctar en la colmena): {self.w3}
-              w4 (Néctar cargado): {self.w4}
-              w5 (Vida abeja): {self.w5}
-              w6 (Energía abeja): {self.w6}
-              w7 (Proximidad): {self.w7}"""
+        """Retorna una representación legible de la configuración actual de pesos."""
+        return f"""Configuración de Pesos Heurísticos:
+              w1 (Flores Vivas):       {self.w1}
+              w2 (Flores Polinizadas): {self.w2}
+              w3 (Néctar Colmena):     {self.w3} [Prioridad Alta]
+              w4 (Néctar Inventario):  {self.w4}
+              w5 (Vida Abeja):         {self.w5}
+              w6 (Energía Abeja):      {self.w6}
+              w7 (Proximidad):         {self.w7}
+              w8 (Amenaza/Recursos):   {self.w8}
+              w9 (Obstáculos):         {self.w9}"""
 
 
 if __name__ == "__main__":
     h = Heuristica()
-    print("Heurística implementada")
+    print("--- Sistema de Heurística Inicializado ---")
     print(h.to_string())
-    print("\nFórmula: H(s) = H_tauler + H_agent + H_progrés + H_proximitat")
-    print("Cada componente pondera diferentes aspectos del estado del juego")
+    print("\nFórmula de Evaluación:")
+    print("H(s) = H_tablero + H_agent + H_progres + H_proximidad + H_amenaza - H_obstaculos")

@@ -101,7 +101,7 @@ class BeeGameGUI:
 
         self.humanidad_agente = Humanidad()
         self.eventos_azar = ChanceEvents()
-        self.heuristica = Heuristica(w1=10, w2=8, w3=15, w4=5, w5=3, w6=2, w7=1)
+        self.heuristica = Heuristica(w1=10, w2=8, w3=15, w4=5, w5=3, w6=2, w7=1, w8=5, w9=5)
         self.ai = ExpectimaxAI(max_depth=2, heuristica=self.heuristica)
         self.game_manager = GameManager(nectar_objetivo=nectar_objetivo)
 

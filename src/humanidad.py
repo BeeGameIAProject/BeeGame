@@ -38,15 +38,29 @@ class Humanidad():
                 if distancia <= self.radio_pesticida:
                     acciones.append(('pesticida', pos))
         
-        # Obtenemos las acciones de los obstáculos (radio 3 de la colmena, en casillas vacías, EXCLUYENDO la casilla de la colmena)
+        # Obtenemos las acciones de los obstáculos (radio 3 de la colmena y de la abeja)
         pos_colmena = tablero.pos_colmena
-        for i in range(tablero.filas):
-            for j in range(tablero.columnas):
-                if tablero.get_celda(i, j) is None and (i, j) != pos_abeja:  # Casilla vacía y verificamos que no sea la posición de la abeja
-                    distancia = self.distancia_chebyshev((i, j), pos_colmena)
-                    # Radio 3 pero EXCLUYENDO la casilla de la colmena (distancia > 0)
-                    if 0 < distancia <= self.radio_obstaculo:
-                        acciones.append(('obstaculo', (i, j)))
+        candidatos_obstaculos = set()
+        
+        # Zona Colmena
+        for i in range(max(0, pos_colmena[0] - self.radio_obstaculo), min(tablero.filas, pos_colmena[0] + self.radio_obstaculo + 1)):
+            for j in range(max(0, pos_colmena[1] - self.radio_obstaculo), min(tablero.columnas, pos_colmena[1] + self.radio_obstaculo + 1)):
+                candidatos_obstaculos.add((i, j))
+                
+        # Zona Abeja (para que la IA también considere bloquear a la abeja directamente)
+        for i in range(max(0, pos_abeja[0] - self.radio_obstaculo), min(tablero.filas, pos_abeja[0] + self.radio_obstaculo + 1)):
+            for j in range(max(0, pos_abeja[1] - self.radio_obstaculo), min(tablero.columnas, pos_abeja[1] + self.radio_obstaculo + 1)):
+                candidatos_obstaculos.add((i, j))
+
+        for (i, j) in candidatos_obstaculos:
+            # Casilla vacía y verificamos que no sea la posición de la abeja ni la colmena
+            if tablero.get_celda(i, j) is None and (i, j) != pos_abeja and (i, j) != pos_colmena:
+                # Verificamos la distancia Chebyshev a colmena O abeja
+                dist_colmena = self.distancia_chebyshev((i, j), pos_colmena)
+                dist_abeja = self.distancia_chebyshev((i, j), pos_abeja)
+                
+                if (0 < dist_colmena <= self.radio_obstaculo) or (0 < dist_abeja <= self.radio_obstaculo):
+                    acciones.append(('obstaculo', (i, j)))
 
         random.shuffle(acciones)  # Para que la IA no tenga preferencias por la primera acción si las demás son igual de buenas
         return acciones
