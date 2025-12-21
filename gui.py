@@ -74,7 +74,7 @@ class BeeGameGUI:
         self.BOARD_WIDTH = columnas * self.CELL_SIZE
         self.BOARD_HEIGHT = filas * self.CELL_SIZE
         self.WINDOW_WIDTH = self.BOARD_WIDTH + self.PANEL_WIDTH
-        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 100, 600)
+        self.WINDOW_HEIGHT = max(self.BOARD_HEIGHT + 100, 730)
         # -----------------------------------------------------------------
 
         # Activar anti-aliasing y transparencia
@@ -156,7 +156,7 @@ class BeeGameGUI:
 
     def crear_botones(self):
         x_start = self.BOARD_WIDTH + 25
-        y_start = self.WINDOW_HEIGHT - 140
+        y_start = 580
         w = 165
         h = 50
         gap = 20
@@ -592,7 +592,7 @@ class BeeGameGUI:
         lluvia_titulo = self.font_bold.render("Lluvia (10%)", True, (52, 152, 219))
         self.screen.blit(lluvia_titulo, (margin_x + 60, y_offset + 5))
 
-        lluvia_desc1 = self.font_small.render("Reduce -1 pesticida a las flores afectadas", True, (70, 70, 70))
+        lluvia_desc1 = self.font_small.render("-1 pesticida a las flores afectadas", True, (70, 70, 70))
         self.screen.blit(lluvia_desc1, (margin_x + 60, y_offset + 28))
         lluvia_desc2 = self.font_small.render("(limpia la contaminación)", True, (120, 120, 120))
         self.screen.blit(lluvia_desc2, (margin_x + 60, y_offset + 44))

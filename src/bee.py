@@ -1,4 +1,3 @@
-from . import board
 import heapq
 
 import random # necesario para A* con aleatoriedad
