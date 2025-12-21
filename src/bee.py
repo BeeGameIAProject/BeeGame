@@ -4,7 +4,7 @@ import random # necesario para A* con aleatoriedad
 
 class Bee():
     
-    def  __init__(self, vida, energia=100, capacidad_nectar=50, first_move=True, factor_a_star=0.5):
+    def  __init__(self, vida, energia=100, capacidad_nectar=30, first_move=True, factor_a_star=0.5):
         self.vida = vida
         self.max_vida = vida
         self.energia = energia

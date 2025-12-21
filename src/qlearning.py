@@ -25,7 +25,7 @@ class QLearningAI:
         num_flors = len([fl for pos, fl in board.flores if fl.vida > 0])
         
         # Miramos el nivel de energia de la abeja (0: critica, 1: normal)
-        energia_status = 1 if board.abeja.energia > 20 else 0
+        energia_status = 1 if hasattr(board, 'abeja') and board.abeja.energia > 20 else 0
         
         return (quad, num_flors, energia_status)
 

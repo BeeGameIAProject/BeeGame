@@ -8,10 +8,10 @@ class Heuristica():
     Función heurística completa para evaluar estados del juego.
     
     Componentes:
-    - H_tauler: Valoración del estado del tablero (flores)
+    - H_tablero: Valoración del estado del tablero (flores)
     - H_agent: Valoración del estado de la abeja
-    - H_progrés: Valoración del progreso hacia la victoria
-    - H_proximitat: Valoración de la distancia a objetivos
+    - H_progreso: Valoración del progreso hacia la victoria
+    - H_proximidad: Valoración de la distancia a objetivos
     
     Fórmula: H(s) = w1*H_tauler + w2*H_agent + w3*H_progrés + w4*H_proximitat
     """
@@ -60,19 +60,19 @@ class Heuristica():
             return 100000
         
         # Calculamos los componentes de la heurística
-        h_tauler = self.h_tauler(estado)
+        h_tablero = self.h_tablero(estado)
         h_agent = self.h_agent(estado)
-        h_progres = self.h_progres(estado)
-        h_proximitat = self.h_proximitat(estado)
+        h_progreso = self.h_progreso(estado)
+        h_proximidad = self.h_proximidad(estado)
         
         # Combinamos los componentes con pesos
-        valor_total = h_tauler + h_agent + h_progres + h_proximitat
+        valor_total = h_tablero + h_agent + h_progreso + h_proximidad
         
         return valor_total
     
-    def h_tauler(self, estado):
+    def h_tablero(self, estado):
         """
-        H_tauler: Valoración del estado del tablero.
+        H_tablero: Valoración del estado del tablero.
         
         Considera:
         - Número de flores vivas
@@ -142,9 +142,9 @@ class Heuristica():
         
         return valor
     
-    def h_progres(self, estado):
+    def h_progreso(self, estado):
         """
-        H_progrés: Valoración del progreso hacia la victoria.
+        H_progreso: Valoración del progreso hacia la victoria.
         
         Considera:
         - Néctar acumulado en la colmena (objetivo principal)
@@ -172,9 +172,9 @@ class Heuristica():
         
         return valor
     
-    def h_proximitat(self, estado):
+    def h_proximidad(self, estado):
         """
-        H_proximitat: Valoración de la distancia a objetivos.
+        H_proximidad: Valoración de la distancia a objetivos.
         
         Considera:
         - Distancia a flores (si necesita recoger néctar)
@@ -182,7 +182,7 @@ class Heuristica():
         - Prioriza según el estado del inventario
         """
         valor = 0
-        
+
         pos_abeja = estado.pos_abeja
         
         # Si tiene néctar cargado, priorizamos estar cerca de la colmena

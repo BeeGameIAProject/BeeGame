@@ -472,7 +472,7 @@ class BeeGameGUI:
         txt_help = self.font_subtitle.render("?", True, (255, 255, 255))
         self.screen.blit(txt_help, (x + 318, y + 12))
 
-        # Guardamos el rect para detección de click
+        # Guardamos el rect para detección de clic
         self.help_clima_rect = help_rect
 
     def dibujar_widget_ia(self, x, y):
@@ -554,7 +554,7 @@ class BeeGameGUI:
         close_txt = self.font_bold.render("✕", True, (255, 255, 255))
         self.screen.blit(close_txt, (close_x + 6, close_y + 2))
 
-        # Guardamos el rect para cerrar con click
+        # Guardamos el rect para cerrar con clic
         self.close_tooltip_rect = close_rect
 
         # Título principal
@@ -699,7 +699,7 @@ class BeeGameGUI:
         cy = y_pos + 40 - txt.get_height() // 2
         self.screen.blit(txt, (cx, cy))
 
-    def obtener_celda_click(self, pos):
+    def obtener_celda_clic(self, pos):
         x, y = pos
         if x < self.BOARD_WIDTH and y < self.BOARD_HEIGHT:
             return (y // self.CELL_SIZE, x // self.CELL_SIZE)
@@ -753,14 +753,14 @@ class BeeGameGUI:
                 self.finalizar_turno_jugador()
                 return True
             else:
-                self.mensaje = " ¡No tienes energía suficiente para moverte!"
+                self.mensaje = "¡No tienes energía suficiente para moverte!"
         else:
-            self.mensaje = " Camino bloqueado por obstáculo."
+            self.mensaje = "Camino bloqueado por obstáculo."
         return False
 
     def recoger_nectar(self):
         if self.game_over or not self.celda_seleccionada:
-            self.mensaje = " Selecciona una flor primero (click derecho)."
+            self.mensaje = "Selecciona una flor primero (clic derecho)."
             return
 
         f, c = self.celda_seleccionada
@@ -1079,10 +1079,10 @@ class BeeGameGUI:
         futuro_max = max(self.q_table[next_estado].values())
 
         objetivo = recompensa + gamma * futuro_max
-        nuevo_val = antiguo_val + alpha * (objetivo - antiguo_val)
+        new_val = antiguo_val + alpha * (objetivo - antiguo_val)
 
-        self.q_table[estado][accion] = nuevo_val
-        return abs(nuevo_val - antiguo_val)
+        self.q_table[estado][accion] = new_val
+        return abs(new_val - antiguo_val)
 
     def actualizar_evento_climatico(self):
         if self.mostrar_evento_clima:
@@ -1132,7 +1132,7 @@ class BeeGameGUI:
                     if event.key == pygame.K_ESCAPE: running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
-                    if event.button == 1: # Left Click
+                    if event.button == 1: # Clic izquierdo
                         # Check botón cerrar tooltip (si está visible)
                         if self.mostrar_tooltip_clima and hasattr(self, 'close_tooltip_rect') and self.close_tooltip_rect.collidepoint(pos):
                             self.mostrar_tooltip_clima = False
@@ -1143,7 +1143,7 @@ class BeeGameGUI:
                             self.mostrar_tooltip_clima = not self.mostrar_tooltip_clima
                             continue
 
-                        # Si el tooltip está visible, cerrar con cualquier click fuera
+                        # Si el tooltip está visible, cerrar con cualquier clic fuera
                         if self.mostrar_tooltip_clima:
                             self.mostrar_tooltip_clima = False
                             continue
@@ -1170,17 +1170,22 @@ class BeeGameGUI:
 
                         # Si no es botón, es tablero
                         if not clicked_btn:
-                            celda = self.obtener_celda_click(pos)
+                            celda = self.obtener_celda_clic(pos)
                             if celda and self.turno_jugador:
                                 self.mover_abeja(celda)
 
-                    elif event.button == 3: # Right Click
-                        celda = self.obtener_celda_click(pos)
+                    elif event.button == 3:  # Clic derecho
+                        celda = self.obtener_celda_clic(pos)
 
-                        # Solo permitimos seleccionar si es una flor y está viva
-                        f, c = celda
-                        if celda and self.board.es_flor(f, c) and self.board.get_celda(f, c).vida > 0:
-                            self.celda_seleccionada = celda
+                        if celda:  # Primero verificamos que hemos clicado en una celda válida
+                            f, c = celda
+
+                            # Solo permitimos seleccionar si es una flor y está viva
+                            if self.board.es_flor(f, c) and self.board.get_celda(f, c).vida > 0:
+                                self.celda_seleccionada = celda
+                            else:
+                                # Si clicas en algo que no es flor, deseleccionamos
+                                self.celda_seleccionada = None
 
             # Updates
             if self.moviendo_a_star: self.actualizar_a_star()
