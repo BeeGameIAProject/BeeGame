@@ -111,7 +111,7 @@ class BeeGameGUI:
         self.board.inicializar_tablero(num_flores=12, num_obstaculos=2)
 
         start_pos = (self.board.pos_colmena[0] - 1, self.board.pos_colmena[1])
-        self.abeja = Bee(vida=100)
+        self.abeja = Bee(vida=50)
         self.pos_abeja = start_pos
 
         self.humanidad_agente = Humanidad()

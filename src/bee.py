@@ -8,7 +8,7 @@ class Bee:
     Gestiona sus estadísticas vitales, inventario y movimiento.
     """
 
-    def __init__(self, vida, energia=100, capacidad_nectar=30, factor_a_star=0.5):
+    def __init__(self, vida=50, energia=60, capacidad_nectar=30, factor_a_star=0.5):
         self.vida = vida
         self.max_vida = vida
         self.energia = energia
@@ -141,6 +141,9 @@ class Bee:
 
         if not isinstance(celda, Flower) or not celda.esta_viva():
             return False
+
+        # Aplicar daño si la flor tiene pesticidas antes de recolectar
+        self.aplicar_daño_por_flor(tablero, posicion)
 
         # Ejecutar acción
         celda.polinizar()
