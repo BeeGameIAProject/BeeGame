@@ -141,6 +141,7 @@ class BeeGameGUI:
         self.nodos_explorados = 0
         self.tiempo_calculo_ia = 0
         self.ia_error = [0]
+        self.error_semantic = [0]
 
         # Animaciones y Eventos
         self.moviendo_a_star = False
@@ -339,7 +340,7 @@ class BeeGameGUI:
             # Nota: usamos abs() para ver la magnitud del cambio de opinión
             diferencia_juicio = abs(valor_estatico - peor_valor_para_abeja)
             self.ia_error.append(diferencia_juicio)
-
+            self._calcular_error_decision_humana(mejor_accion)
             return True
         return False
 
@@ -358,7 +359,7 @@ class BeeGameGUI:
 
             # CAPTURAMOS EL ERROR AQUÍ
             td_error = self.q_agent.update(estado_s, accion, recompensa, estado_s_prime, nuevas_acciones)
-
+            self._calcular_error_decision_humana(accion)
             # Lo guardamos para la gráfica/stats (sobrescribiendo el cálculo de distancia anterior)
             self.ia_error.append(td_error)
             return True
@@ -381,6 +382,34 @@ class BeeGameGUI:
         self.humanidad_agente.ejecutar_accion(self.board, accion, self.pos_abeja)
         tipo, pos = accion
         self.mensaje = f"{nombre_ia}: {tipo.capitalize()} en {pos}"
+    def _calcular_error_decision_humana(self, accion_elegida):
+        """
+        Calcula el error como la diferencia entre la acción tomada por la IA
+        y un escenario alternativo razonable (flor más cercana a la abeja).
+
+        Este error mide desalineación estratégica, NO aprendizaje.
+        """
+        tipo, pos_accion = accion_elegida
+
+        # Distancia entre la acción realizada y la abeja
+        dist_accion = self.humanidad_agente.distancia_chebyshev(
+            pos_accion, self.pos_abeja
+        )
+
+        # Distancia entre la abeja y la flor viva más cercana
+        flores_vivas = [p for p, fl in self.board.flores if fl.vida > 0]
+        dist_flor = 0
+
+        if flores_vivas:
+            dist_flor = min(
+                self.humanidad_agente.distancia_chebyshev(p, self.pos_abeja)
+                for p in flores_vivas
+            )
+
+        # Error = diferencia entre decisión real y escenario alternativo
+        error = abs(dist_accion - dist_flor)
+
+        self.error_semantic.append(error)
 
     def _calcular_recompensa_qlearning(self, accion):
         tipo, pos = accion
@@ -797,11 +826,13 @@ class BeeGameGUI:
     def dibujar_widget_ia(self, x, y):
         pygame.draw.rect(self.screen, (255, 255, 255), (x, y, 350, 70), border_radius=10)
         t = "IA Expectimax" if self.usar_expectimax else "IA Q-Learning"
-        self.screen.blit(self.font_bold.render(t, True, C_TEXTO_PRINCIPAL), (x + 20, y + 15))
+        self.screen.blit(self.font_bold.render(t, True, C_TEXTO_PRINCIPAL), (x + 20, y+5))
 
         # Stats
-        stats = f"Nodos: {self.nodos_explorados} | T: {self.tiempo_calculo_ia * 1000:.0f}ms | Err: {mean(self.ia_error):.1f}"
-        self.screen.blit(self.font_small.render(stats, True, C_TEXTO_SECUNDARIO), (x + 20, y + 40))
+        stats = f"Nodos: {self.nodos_explorados} | T: {self.tiempo_calculo_ia * 1000:.0f}ms | Err(IA): {mean(self.ia_error):.1f}"
+        self.screen.blit(self.font_small.render(stats, True, C_TEXTO_SECUNDARIO), (x + 20, y + 32))
+        stats = f"Err(Sem): {mean(self.error_semantic):.1f}"
+        self.screen.blit(self.font_small.render(stats, True, C_TEXTO_SECUNDARIO), (x + 20, y + 50))
 
     def dibujar_log(self, x, y):
         pygame.draw.rect(self.screen, (255, 255, 255), (x, y, 350, 80), border_radius=5)
