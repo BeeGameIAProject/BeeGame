@@ -19,18 +19,18 @@ El simulador plantea un problema de toma de decisiones en un entorno dinámico e
 * Librería `pygame`.
 
 ### Pasos para ejecutar
-1.  Clona este repositorio en tu máquina local:
+1.  Clonar este repositorio:
     ```bash
     git clone https://github.com/BeeGameIAProject/BeeGame.git
     cd BeeGame
     ```
 
-2.  Instala las dependencias necesarias:
+2.  Instalar las dependencias necesarias:
     ```bash
     pip install pygame
     ```
 
-3.  Inicia la simulación:
+3.  Iniciar la simulación:
     ```bash
     python main.py
     ```
@@ -60,10 +60,10 @@ La interfaz gráfica incluye un panel de métricas en tiempo real para evaluar e
 
 * **T (Tiempo):** Coste computacional de cada decisión en segundos. Permite analizar la latencia introducida por la profundidad del árbol de búsqueda frente a la inmediatez de la tabla Q.
 * **Nodos:** Cantidad de estados explorados por turno. Esta métrica es exclusiva para Expectimax e indica la complejidad del árbol de decisión en ese instante.
-* **Err (Error / Divergencia):** Una métrica adaptativa según el algoritmo activo:
+* **Err (Error):** Una métrica adaptativa según el algoritmo activo:
     * **En Q-Learning (TD-Error):** Representa el Error de Diferencia Temporal. Mide la discrepancia entre la recompensa esperada y la realmente obtenida. Un valor decreciente hacia cero indica que el agente está aprendiendo y sus predicciones se alinean con la realidad.
     * **En Expectimax (Volatilidad):** Calculada como la diferencia absoluta entre la evaluación heurística estática del estado actual y la evaluación profunda tras la búsqueda. Un valor alto indica que la búsqueda profunda ha revelado información táctica (amenazas u oportunidades) que la evaluación superficial ignoraba.
-
+* **Error semántico (`error_sem`):** Métrica interpretativa externa que evalúa la coherencia estratégica de la acción tomada por la IA. Se define como la diferencia entre la distancia desde la acción ejecutada (por ejemplo, la colocación de un pesticida) hasta la posición de la abeja y la distancia mínima entre la abeja y la flor viva más cercana en ese mismo estado. Un valor bajo indica una decisión alineada con una intuición estratégica inmediata, mientras que un valor alto señala una desviación respecto a una alternativa razonable, sin implicar necesariamente un fallo del algoritmo.
 ## Estructura del Código
 
 El proyecto sigue una arquitectura modular donde la lógica está desacoplada de la vista:
